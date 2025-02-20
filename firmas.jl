@@ -10,11 +10,6 @@ using Statistics
 using Flux
 using Flux.Losses
 
-
-using Statistics
-using Flux
-using Flux.Losses
-
 function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1})
     num_classes = length(classes)
     num_samples = length(feature)
@@ -152,8 +147,7 @@ function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
 end;
 
 function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
-    num_rows, num_cols = size(outputs) #obtengo las dimensiones de la matriz
-    if num_cols == 1
+    if size(outputs,2) == 1 # dimensiones de la matriz solo una columna
         return reshape(classifyOutputs(outputs[:], threshold=threshold),num_rows,1 )
     else 
         (_, indicesMaxEachInstance) = findmax(outputs, dims=2);
@@ -164,27 +158,31 @@ function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
 end;
 
 function accuracy(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
-    #
-    # Codigo a desarrollar
-    #
+    return mean((outputs .== targets)) 
 end;
 
 function accuracy(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2})
-    #
-    # Codigo a desarrollar
-    #
+    if size(targets, 2) == 1 # columnas = 2?  || size(outputs, 2) == 2
+        return accuracy(vec(outputs), vec(targets')) #array multidimensional a columna 
+    else
+        classComparison = targets' .== outputs
+        correctClassifications = all(classComparison, dims=2)
+        accuracy = mean(correctClassifications) 
+        return accuracy 
+    end
 end;
 
 function accuracy(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
-    #
-    # Codigo a desarrollar
-    #
+        return accuracy(outputs, targets' .>= threshold)
 end;
 
 function accuracy(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5)
-    #
-    # Codigo a desarrollar
-    #
+    if size(targets', 2) == 1 
+        return accuracy(vec(outputs), vec(targets'))
+    else
+        classifiedOutputs = classifyOutputs(outputs)
+        return accuracy(targets', classifiedOutputs)
+    end
 end;
 
 function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutputs::Int; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)))
