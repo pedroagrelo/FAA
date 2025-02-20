@@ -43,65 +43,113 @@ oneHotEncoding(feature::AbstractArray{Bool,1}) = reshape(feature, length(feature
     
 
 
-function calculateMinMaxNormalizationParameters(dataset::AbstractArray{<:Real,2})
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function calculateZeroMeanNormalizationParameters(dataset::AbstractArray{<:Real,2})
-    #
-    # Codigo a desarrollar
-    #
-end;
+# Función para calcular los parámetros de normalización MinMax
+function calculateMinMaxNormalizationParameters(dataset::AbstractArray{<:Real, 2})
+  
+    
+    min_vals = minimum(dataset, dims=1)
+    max_vals = maximum(dataset, dims=1)
 
-function normalizeMinMax!(dataset::AbstractArray{<:Real,2}, normalizationParameters::NTuple{2, AbstractArray{<:Real,2}})
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function normalizeMinMax!(dataset::AbstractArray{<:Real,2})
-    #
-    # Codigo a desarrollar
-    #
-end;
+    min_vals = reshape(min_vals, 1, length(min_vals))
+    max_vals = reshape(max_vals, 1, length(max_vals))
+  
+    # Devolvemos como una tupla
+    return (min_vals, max_vals)
+end
 
-function normalizeMinMax(dataset::AbstractArray{<:Real,2}, normalizationParameters::NTuple{2, AbstractArray{<:Real,2}})
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function normalizeMinMax(dataset::AbstractArray{<:Real,2})
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function normalizeZeroMean!(dataset::AbstractArray{<:Real,2}, normalizationParameters::NTuple{2, AbstractArray{<:Real,2}})
-    #
-    # Codigo a desarrollar
-    #
-end;
+# Función para calcular los parámetros de normalización Zero-Mean
+function calculateZeroMeanNormalizationParameters(dataset::AbstractArray{<:Real, 2})
+    if isempty(dataset)
+        error("El dataset está vacío.")
+    end
+    if any(isnan, dataset) || any(isinf, dataset)
+        error("El dataset contiene valores NaN o Inf.")
+    end
 
-function normalizeZeroMean!(dataset::AbstractArray{<:Real,2})
-    #
-    # Codigo a desarrollar
-    #
-end;
+    means = mean(dataset, dims=1)
+    std_devs = std(dataset, dims=1)
 
-function normalizeZeroMean(dataset::AbstractArray{<:Real,2}, normalizationParameters::NTuple{2, AbstractArray{<:Real,2}})
-    #
-    # Codigo a desarrollar
-    #
-end;
+    # Evita divisiones por 0 reemplazando std_devs == 0 con 1
+    std_devs = std_devs .+ (std_devs .== 0)
 
-function normalizeZeroMean(dataset::AbstractArray{<:Real,2})
-    #
-    # Codigo a desarrollar
-    #
-end;
+    means = reshape(means, 1, length(means))
+    std_devs = reshape(std_devs, 1, length(std_devs))
+
+    return (means, std_devs)
+end
+
+
+# Función para normalizar entre Min-Max, modificando la matriz original
+function normalizeMinMax!(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
+    min_vals, max_vals = normalizationParameters
+    min_vals=Matrix(min_vals)
+    max_vals=Matrix(max_vals)
+    
+    # Evitamos la división por cero en el caso de que el valor máximo sea igual al valor mínimo
+    dataset .-= min_vals
+    dataset .*= 1 ./ (max_vals .- min_vals) .^ (max_vals .!= min_vals)
+
+end
+
+# Función para normalizar entre Min-Max, calculando los parámetros antes de normalizar
+function normalizeMinMax!(dataset::AbstractArray{<:Real, 2})
+    # Calculamos los parámetros de normalización
+    normalizationParameters = calculateMinMaxNormalizationParameters(dataset)
+
+    # Normalizamos la matriz
+    normalizeMinMax!(dataset, normalizationParameters)
+end
+
+# Función para normalizar entre Min-Max sin modificar la matriz original, usando parámetros previos
+function normalizeMinMax(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
+    
+    # Hacemos una copia de la matriz para no modificar la original
+    dataset_copy = copy(dataset)
+    # Normalizamos la copia de la matriz
+    normalizeMinMax!(dataset_copy, normalizationParameters)
+    return dataset_copy
+end
+
+# Función para normalizar entre Min-Max sin modificar la matriz original, calculando parámetros antes de normalizar
+function normalizeMinMax(dataset::AbstractArray{<:Real, 2})
+    # Calculamos los parámetros de normalización
+    normalizationParameters = calculateMinMaxNormalizationParameters(dataset)
+    # Normalizamos y devolvemos la nueva matriz
+    return normalizeMinMax(dataset, normalizationParameters)
+end
+
+
+
+function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
+    means, std_devs = normalizationParameters
+    means=Matrix(means)
+    std_devs=Matrix(std_devs)
+    dataset .-= means
+    dataset .*= 1 ./ std_devs
+end
+
+
+function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
+    normalizationParameters = calculateZeroMeanNormalizationParameters(dataset)
+    normalizeZeroMean!(dataset, normalizationParameters)
+end
+
+
+function normalizeZeroMean(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
+    dataset_copy = copy(dataset)
+    normalizeZeroMean!(dataset_copy, normalizationParameters)
+    return dataset_copy
+end
+
+
+function normalizeZeroMean(dataset::AbstractArray{<:Real, 2})
+    normalizationParameters = calculateZeroMeanNormalizationParameters(dataset)
+    return normalizeZeroMean(dataset, normalizationParameters)
+end
 
 function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
     #
@@ -326,7 +374,4 @@ function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dat
     #
     # Codigo a desarrollar
     #
-end;
-
-
-
+end
