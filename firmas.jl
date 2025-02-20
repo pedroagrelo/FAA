@@ -21,15 +21,11 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
     
     if num_classes <= 2
         # Caso binario: Generar un vector booleano y convertirlo en una matriz columna
-        encoded = reshape(feature .== classes[1], num_samples, 1)
+        return reshape(feature .== classes[1], num_samples, 1) #NUM SAMPLE FILAS 1 columna
     else
-        # Caso multiclase: Crear una matriz de valores booleanos
-        encoded = falses(num_samples, num_classes)  # BitArray por eficiencia
-        for (i, c) in enumerate(classes)
-            encoded[:, i] .= feature .== c  # Comparar con cada clase y asignar
-        end
+        # Caso multiclase: Crear una matriz de valores booleanos one-hot# Comparar con cada clase y asignar
+        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...)')   
     end
-    return encoded
 end
 
 
@@ -152,15 +148,19 @@ function normalizeZeroMean(dataset::AbstractArray{<:Real, 2})
 end
 
 function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
-    #
-    # Codigo a desarrollar
-    #
+    return outputs.>=threshold
 end;
 
 function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
-    #
-    # Codigo a desarrollar
-    #
+    num_rows, num_cols = size(outputs) #obtengo las dimensiones de la matriz
+    if num_cols == 1
+        return reshape(classifyOutputs(outputs[:], threshold=threshold),num_rows,1 )
+    else 
+        (_, indicesMaxEachInstance) = findmax(outputs, dims=2);
+        classified = falses(size(outputs));
+        classified[indicesMaxEachInstance] .= true
+        return classified
+    end
 end;
 
 function accuracy(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
