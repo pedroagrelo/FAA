@@ -116,11 +116,12 @@ end
 
 function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
     means, std_devs = normalizationParameters
-    means=Matrix(means)
-    std_devs=Matrix(std_devs)
     dataset .-= means
-    dataset .*= 1 ./ std_devs
+    dataset ./= std_devs
+    dataset[:, vec(std_devs .== 0)] .= 0
+    return dataset
 end
+
 
 
 function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
@@ -128,7 +129,17 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
     normalizeZeroMean!(dataset, normalizationParameters)
 end
 
+dataset = [1.0  5.0  3.0;
+           2.0  6.0  3.0;
+           3.0  7.0  3.0]  # La tercera columna es constante
 
+means = mean(dataset, dims=1)
+std_devs = std(dataset, dims=1)
+
+normalizeZeroMean!(dataset, (means, std_devs))
+
+println("Dataset normalizado:")
+println(dataset)
 
 function normalizeZeroMean(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
     dataset_copy = copy(dataset)
