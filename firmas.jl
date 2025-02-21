@@ -19,7 +19,7 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
         return reshape(feature .== classes[1], num_samples, 1) #NUM SAMPLE FILAS 1 columna
     else
         # Caso multiclase: Crear una matriz de valores booleanos one-hot# Comparar con cada clase y asignar
-        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...)')   
+        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...))   
     end
 end
 
