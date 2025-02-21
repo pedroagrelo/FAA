@@ -24,7 +24,6 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
 end
 
 
-
 # Sobrecarga que extrae automáticamente las categorías y llama a la función principal
 oneHotEncoding(feature::AbstractArray{<:Any,1}) = oneHotEncoding(feature, unique(feature))
 
@@ -128,6 +127,7 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
     normalizationParameters = calculateZeroMeanNormalizationParameters(dataset)
     normalizeZeroMean!(dataset, normalizationParameters)
 end
+
 
 
 function normalizeZeroMean(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
