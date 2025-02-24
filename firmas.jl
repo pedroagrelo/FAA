@@ -19,7 +19,7 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
         return reshape(feature .== classes[1], num_samples, 1) #NUM SAMPLE FILAS 1 columna
     else
         # Caso multiclase: Crear una matriz de valores booleanos one-hot# Comparar con cada clase y asignar
-        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...)')   
+        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...))   
     end
 end
 
@@ -147,8 +147,8 @@ function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
 end;
 
 function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
-    if size(outputs,2) == 1 # dimensiones de la matriz solo una columna
-        return reshape(classifyOutputs(outputs[:], threshold=threshold),num_rows,1 )
+    if size(targets, 2) == 1# dimensiones de la matriz solo una columna
+        return reshape(classifyOutputs(outputs[:], threshold=threshold),:,1 ) #coge todas las filas y la primera columna 
     else 
         (_, indicesMaxEachInstance) = findmax(outputs, dims=2);
         classified = falses(size(outputs));
@@ -158,37 +158,60 @@ function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
 end;
 
 function accuracy(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
-    return mean((outputs .== targets)) 
+    return mean((outputs .== targets))
 end;
 
 function accuracy(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2})
     if size(targets, 2) == 1 # columnas = 2?  || size(outputs, 2) == 2
-        return accuracy(vec(outputs), vec(targets')) #array multidimensional a columna 
+        return accuracy(vec(outputs), vec(targets)) #array multidimensional a columna 
     else
-        classComparison = targets' .== outputs
+        classComparison = targets .== outputs
         correctClassifications = all(classComparison, dims=2)
-        accuracy = mean(correctClassifications) 
-        return accuracy 
+        precision = mean(correctClassifications) 
+        return precision
     end
 end;
 
 function accuracy(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
-        return accuracy(outputs, targets' .>= threshold)
+        return accuracy(outputs .>= threshold, targets)
 end;
 
 function accuracy(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5)
-    if size(targets', 2) == 1 
-        return accuracy(vec(outputs), vec(targets'))
+    if size(targets, 2) == 1 
+        return accuracy(vec(outputs), vec(targets))
     else
         classifiedOutputs = classifyOutputs(outputs)
-        return accuracy(targets', classifiedOutputs)
+        return accuracy(targets, classifiedOutputs)
     end
 end;
 
 function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutputs::Int; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)))
-    #
-    # Codigo a desarrollar
-    #
+    # Inicializar la red neuronal vacía
+    ann = Chain()
+
+    # Variable para mantener el número de entradas de la capa actual
+    numInputsLayer = numInputs
+
+    # Construcción de las capas ocultas (si existen)
+    if !isempty(topology)
+        for (i, numOutputsLayer) in enumerate(topology)
+            activation_function = transferFunctions[i]  # Selecciona la función de activación especificada
+            ann = Chain(ann..., Dense(numInputsLayer, numOutputsLayer, activation_function)) #añadimos capa oculta
+            numInputsLayer = numOutputsLayer  # Actualiza el número de entradas para la próxima capa
+        end
+    end
+
+    # Capa de salida según el número de clases
+    if numOutputs == 1
+        # Clasificación binaria (una sola salida con función sigmoide)
+        ann = Chain(ann..., Dense(numInputsLayer, numOutputs, σ))
+    else
+        # Clasificación multiclase (uso de softmax para probabilidades)
+        ann = Chain(ann..., Dense(numInputsLayer, numOutputs), softmax)
+    end
+
+    return ann
+    
 end;
 
 function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
