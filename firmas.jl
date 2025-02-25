@@ -225,17 +225,129 @@ function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutp
     
 end;
 
-function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function trainClassANN(topology::AbstractArray{<:Int,1}, (inputs, targets)::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-    #
-    # Codigo a desarrollar
-    #
-end;
+using Flux
+
+function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; 
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
+    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
+
+    inputs, targets = dataset
+
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs == nothing || targets == nothing
+        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+    end
+
+    # Asegurarse de que las entradas estén en Float32
+    inputs = convert(Array{Float32}, inputs)
+
+    # Asegurarse de que las salidas estén en la forma correcta
+    # Si es un problema binario, convertir targets de vector a matriz columna
+    if size(targets, 2) == 1
+        targets = reshape(targets, :, 1)  # Si ya es columna, no cambia nada
+    else
+        targets = convert(Array{Float32}, targets)
+    end
+
+    # Mostrar tamaños de las entradas y salidas
+    println("Tamaño de las entradas: ", size(inputs))
+    println("Tamaño de las salidas: ", size(targets))
+
+    # Verificar que el número de patrones (columnas de inputs) coincida con el número de salidas (columnas de targets)
+    if size(inputs, 2) != size(targets, 1)
+        throw(ArgumentError("El número de patrones (columnas de inputs) no coincide con el número de salidas (columnas de targets)."))
+    end
+
+    # Crear la red neuronal utilizando la topología y funciones de activación
+    layers = []
+
+    # Capa de entrada a la primera capa oculta (entrada con tamaño inputs[1])
+    push!(layers, Flux.Dense(size(inputs, 1), topology[1], transferFunctions[1]))
+
+    # Capas ocultas
+    for i in 2:length(topology)
+        push!(layers, Flux.Dense(topology[i-1], topology[i], transferFunctions[i]))
+    end
+
+    # Capa de salida (la salida tiene el tamaño de targets[1])
+    push!(layers, Flux.Dense(topology[end], size(targets, 1), Flux.σ))  # Usar activación sigmoide en la salida
+
+    # Crear el modelo utilizando Chain con las capas definidas
+    model = Chain(layers...)
+
+    # Definir el optimizador
+    opt = Flux.ADAM(learningRate)
+
+    # Inicializar el vector de pérdidas
+    losses = Float32[]
+
+    # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
+    for epoch in 1:maxEpochs
+        # Calcular la pérdida: usamos el error cuadrático medio
+        loss(x, y) = Flux.mse(model(x), y)
+        
+        # Calcular el valor de la pérdida en el conjunto de entrenamiento
+        currentLoss = loss(inputs, targets)
+        push!(losses, currentLoss)
+        
+        # Verificar si el criterio de parada ha sido alcanzado
+        if currentLoss <= minLoss
+            println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
+            break
+        end
+
+        # Actualizar los pesos mediante backpropagation
+        Flux.train!(loss, params(model), [(inputs, targets)], opt)
+
+        # Mostrar progreso cada ciertos ciclos
+        if epoch % 100 == 0
+            println("Epoch: $epoch, Loss: $currentLoss")
+        end
+    end
+
+    return model, losses
+end
+
+# Función para el caso de clasificación binaria
+function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; 
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
+    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
+
+    inputs, targets = dataset
+
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs == nothing || targets == nothing
+        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+    end
+
+    # Convertir las salidas (en caso de clasificación binaria) a una matriz de una columna
+    targets = reshape(targets, :, 1)
+
+    # Asegurar que las entradas sean de tipo Float32
+    inputs = convert(Array{Float32}, inputs)
+
+    # Llamar a la función anterior para entrenar la RNA
+    return trainClassANN(topology, (inputs, targets); transferFunctions=transferFunctions, maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate)
+end
+
+
+
+# Datos de ejemplo
+X = rand(10, 100)  # 10 características, 100 patrones
+Y = rand(Bool, 100)  # 100 salidas binarias (0 o 1)
+
+# Convertir los datos a un formato adecuado
+dataset = (X, Y)
+
+# Definir la topología (2 capas ocultas con 5 y 3 neuronas)
+topology = [5, 3]
+
+# Entrenar la red
+model, losses = trainClassANN(topology, dataset)
+
+# Imprimir las pérdidas de cada época
+println(losses)
 
 
 # ----------------------------------------------------------------------------------------------
