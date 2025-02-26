@@ -211,15 +211,30 @@ end;
 using Random
 
 function holdOut(N::Int, P::Real)
-    #
-    # Codigo a desarrollar
-    #
+    @assert 0 ≤ P ≤ 1 "P debe estar entre 0 y 1"
+    indices = randperm(N)  # Permutación aleatoria de los índices
+    n_test = round(Int, P * N)  # Cantidad de patrones para test
+    train_idx, test_idx = indices[1:end-n_test], indices[end-n_test+1:end]  # División en dos subconjuntos
+    return train_idx, test_idx
 end;
 
 function holdOut(N::Int, Pval::Real, Ptest::Real)
-    #
-    # Codigo a desarrollar
-    #
+    @assert Pval + Ptest <= 1 "La suma de Pval y Ptest debe ser menor o igual a 1"
+    #Conjunto de test
+    train_val_idx, test_idx = holdOut(N, Ptest)
+
+    # Calcular la nueva tasa de validación relativa al conjunto de entrenamiento+validación
+    new_Pval = Pval / (1 - Ptest)
+
+    # Segunda separación: Conjunto de validación
+    train_idx, val_idx = holdOut(length(train_val_idx), new_Pval)
+
+    # Ajustar índices para que coincidan con el conjunto original
+    train_idx = train_val_idx[train_idx]
+    val_idx = train_val_idx[val_idx]
+
+    return train_idx, val_idx, test_idx
+
 end;
 
 function trainClassANN(topology::AbstractArray{<:Int,1},
