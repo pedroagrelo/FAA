@@ -243,8 +243,8 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
 
     targets = convert(Array{Float32}, targets) #para comparar dos float 
 
-    numInputs = size(inputs, 1)   # Filas de `inputs` = Número de características #antes estaba en columnas
-    numOutputs = size(targets, 1) # Filas de `targets` = Número de clases # antes estaba en columnas
+    numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características 
+    numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases 
 
     #Construcción de la RNA
     rna = buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
@@ -253,7 +253,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     opt_state = Flux.setup(Adam(learningRate), rna) 
 
     #Defino la funcion de perdidas
-    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x)',y') : Losses.crossentropy(rna(x)',y'); #rna al principio no puede estar #
+    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
     
     # Inicializar el vector de pérdidas
     losses = Float32[]
@@ -262,7 +262,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     for epoch in 1:maxEpochs
         
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
-        currentLoss = loss(inputs, targets) 
+        currentLoss = loss(inputs', targets') 
         push!(losses, currentLoss)
         
         # Verificar si el criterio de parada ha sido alcanzado
@@ -325,7 +325,7 @@ dataset = (X, Y)
 topology = [5, 3]
 
 # Entrenar la red
-rna, losses = trainClassANN(topology, dataset)
+rna, losses = trainClassANN(topology, dataset)  
 
 # Imprimir las pérdidas de cada época
 println(losses)
