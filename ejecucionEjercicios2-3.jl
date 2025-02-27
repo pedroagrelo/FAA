@@ -4,15 +4,13 @@
 
 # Importamos el archivo con las soluciones a los ejercicios
 include("firmas.jl");
-#   Cambiar "soluciones.jl" por el nombre del archivo que contenga las funciones desarrolladas
-
-
+#   Cambiar "soluciones.jl" por el nombre del archivo que contenga las funciones a desarrollar
 
 # Fichero de pruebas realizado con la versión 1.11.2 de Julia
 println(VERSION)
-#  y la 1.11.3 de Random
+#  y la 1.11.2 de Random
 println(Random.VERSION)
-#  y la versión 0.14.25 de Flux
+#  y la versión 0.16.0 de Flux
 import Pkg
 Pkg.status("Flux")
 
@@ -46,12 +44,10 @@ targets = oneHotEncoding(dataset[:,5]);
 # Comprobamos que las funciones de normalizar funcionan correctamente
 # Normalizacion entre maximo y minimo
 newInputs = normalizeMinMax(inputs);
-@assert(!isnothing(newInputs))
 @assert(all(minimum(newInputs, dims=1) .== 0));
 @assert(all(maximum(newInputs, dims=1) .== 1));
 # Normalizacion de media 0. en este caso, debido a redondeos, la media y desviacion tipica de cada variable no van a dar exactamente 0 y 1 respectivamente. Por eso las comprobaciones se hacen de esta manera
 newInputs = normalizeZeroMean(inputs);
-@assert(!isnothing(newInputs))
 @assert(all(abs.(mean(newInputs, dims=1)) .<= 1e-4));
 @assert(all(isapprox.(std( newInputs, dims=1), 1)));
 
