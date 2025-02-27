@@ -226,7 +226,7 @@ function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutp
 end;
 
 
-using Flux
+
 
 function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; 
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
