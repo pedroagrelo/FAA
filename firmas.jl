@@ -1,4 +1,3 @@
-
 # Tened en cuenta que en este archivo todas las funciones tienen puesta la palabra reservada 'function' y 'end' al final
 # Según cómo las defináis, podrían tener que llevarlas o no
 
@@ -227,68 +226,42 @@ end;
 
 
 
-
 function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; 
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
     maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-
-    inputs, targets = dataset
+    
+    inputs, targets = dataset # separo la tupla de dos matrices que viene como parametro 
 
     # Verificar que las entradas y las salidas no sean Nothing
     if inputs == nothing || targets == nothing
-        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+        throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
     end
 
     # Asegurarse de que las entradas estén en Float32
-    inputs = convert(Array{Float32}, inputs)
+    inputs = convert(Array{Float32}, inputs) 
 
-    # Asegurarse de que las salidas estén en la forma correcta
-    # Si es un problema binario, convertir targets de vector a matriz columna
-    if size(targets, 2) == 1
-        targets = reshape(targets, :, 1)  # Si ya es columna, no cambia nada
-    else
-        targets = convert(Array{Float32}, targets)
-    end
+    targets = convert(Array{Float32}, targets) #para comparar dos float 
 
-    # Mostrar tamaños de las entradas y salidas
-    println("Tamaño de las entradas: ", size(inputs))
-    println("Tamaño de las salidas: ", size(targets))
+    numInputs = size(inputs, 1)   # Filas de `inputs` = Número de características #antes estaba en columnas
+    numOutputs = size(targets, 1) # Filas de `targets` = Número de clases # antes estaba en columnas
 
-    # Verificar que el número de patrones (columnas de inputs) coincida con el número de salidas (columnas de targets)
-    if size(inputs, 2) != size(targets, 1)
-        throw(ArgumentError("El número de patrones (columnas de inputs) no coincide con el número de salidas (columnas de targets)."))
-    end
-
-    # Crear la red neuronal utilizando la topología y funciones de activación
-    layers = []
-
-    # Capa de entrada a la primera capa oculta (entrada con tamaño inputs[1])
-    push!(layers, Flux.Dense(size(inputs, 1), topology[1], transferFunctions[1]))
-
-    # Capas ocultas
-    for i in 2:length(topology)
-        push!(layers, Flux.Dense(topology[i-1], topology[i], transferFunctions[i]))
-    end
-
-    # Capa de salida (la salida tiene el tamaño de targets[1])
-    push!(layers, Flux.Dense(topology[end], size(targets, 1), Flux.σ))  # Usar activación sigmoide en la salida
-
-    # Crear el modelo utilizando Chain con las capas definidas
-    model = Chain(layers...)
+    #Construcción de la RNA
+    rna = buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
 
     # Definir el optimizador
-    opt = Flux.ADAM(learningRate)
+    opt_state = Flux.setup(Adam(learningRate), rna) 
 
+    #Defino la funcion de perdidas
+    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x)',y') : Losses.crossentropy(rna(x)',y'); #rna al principio no puede estar #
+    
     # Inicializar el vector de pérdidas
     losses = Float32[]
 
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
     for epoch in 1:maxEpochs
-        # Calcular la pérdida: usamos el error cuadrático medio
-        loss(x, y) = Flux.mse(model(x), y)
         
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
-        currentLoss = loss(inputs, targets)
+        currentLoss = loss(inputs, targets) 
         push!(losses, currentLoss)
         
         # Verificar si el criterio de parada ha sido alcanzado
@@ -298,7 +271,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
         end
 
         # Actualizar los pesos mediante backpropagation
-        Flux.train!(loss, params(model), [(inputs, targets)], opt)
+        Flux.train!(loss, rna, [(inputs', targets')], opt_state)
 
         # Mostrar progreso cada ciertos ciclos
         if epoch % 100 == 0
@@ -306,7 +279,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
         end
     end
 
-    return model, losses
+    return rna, losses 
 end
 
 # Función para el caso de clasificación binaria
@@ -327,10 +300,17 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     # Asegurar que las entradas sean de tipo Float32
     inputs = convert(Array{Float32}, inputs)
 
+    
+
     # Llamar a la función anterior para entrenar la RNA
     return trainClassANN(topology, (inputs, targets); transferFunctions=transferFunctions, maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate)
 end
 
+
+#using DelimitedFiles
+#dataset = readdlm("iris.data",',');
+#inputs = ann(inputs);
+#inputs = dataset[:,1:4];
 
 
 # Datos de ejemplo
@@ -344,7 +324,7 @@ dataset = (X, Y)
 topology = [5, 3]
 
 # Entrenar la red
-model, losses = trainClassANN(topology, dataset)
+rna, losses = trainClassANN(topology, dataset)
 
 # Imprimir las pérdidas de cada época
 println(losses)
