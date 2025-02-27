@@ -24,7 +24,6 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
 end
 
 
-
 # Sobrecarga que extrae automáticamente las categorías y llama a la función principal
 oneHotEncoding(feature::AbstractArray{<:Any,1}) = oneHotEncoding(feature, unique(feature))
 
@@ -117,11 +116,12 @@ end
 
 function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
     means, std_devs = normalizationParameters
-    means=Matrix(means)
-    std_devs=Matrix(std_devs)
     dataset .-= means
-    dataset .*= 1 ./ std_devs
+    dataset ./= std_devs
+    dataset[:, vec(std_devs .== 0)] .= 0
+    return dataset
 end
+
 
 
 function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
@@ -129,6 +129,17 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
     normalizeZeroMean!(dataset, normalizationParameters)
 end
 
+dataset = [1.0  5.0  3.0;
+           2.0  6.0  3.0;
+           3.0  7.0  3.0]  # La tercera columna es constante
+
+means = mean(dataset, dims=1)
+std_devs = std(dataset, dims=1)
+
+normalizeZeroMean!(dataset, (means, std_devs))
+
+println("Dataset normalizado:")
+println(dataset)
 
 function normalizeZeroMean(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
     dataset_copy = copy(dataset)
@@ -214,17 +225,109 @@ function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutp
     
 end;
 
-function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function trainClassANN(topology::AbstractArray{<:Int,1}, (inputs, targets)::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-    #
-    # Codigo a desarrollar
-    #
-end;
+
+function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; 
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
+    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
+
+    #loss(model, x, y) = Losses.mse(model(x), y)
+    
+    #opt_state = Flux.setup(Adam(learningRate), ann) 
+    
+    inputs, targets = dataset # separo la tupla de dos matrices que viene como parametro 
+
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs == nothing || targets == nothing
+        throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
+    end
+
+    # Asegurarse de que las entradas estén en Float32
+    inputs = convert(Array{Float32}, inputs) 
+
+    targets = convert(Array{Float32}, targets) #para comparar dos float 
+
+    numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características
+    numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases
+
+    #Construcción de la RNA
+    rna = buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
+
+    # Definir el optimizador
+    opt_state = Flux.setup(Adam(learningRate), rna) 
+
+    #Defino la funcion de perdidas
+    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
+    
+    # Inicializar el vector de pérdidas
+    losses = Float32[]
+
+    # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
+    for epoch in 1:maxEpochs
+        
+        # Calcular el valor de la pérdida en el conjunto de entrenamiento
+        currentLoss = loss(inputs, targets) 
+        push!(losses, currentLoss)
+        
+        # Verificar si el criterio de parada ha sido alcanzado
+        if currentLoss <= minLoss
+            println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
+            break
+        end
+
+        # Actualizar los pesos mediante backpropagation
+        Flux.train!(loss, rna, [(inputs', targets')], opt_state)
+
+        # Mostrar progreso cada ciertos ciclos
+        if epoch % 100 == 0
+            println("Epoch: $epoch, Loss: $currentLoss")
+        end
+    end
+
+    return rna, losses 
+end
+
+# Función para el caso de clasificación binaria
+function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; 
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
+    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
+
+    inputs, targets = dataset
+
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs == nothing || targets == nothing
+        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+    end
+
+    # Convertir las salidas (en caso de clasificación binaria) a una matriz de una columna
+    targets = reshape(targets, :, 1)
+
+    # Asegurar que las entradas sean de tipo Float32
+    inputs = convert(Array{Float32}, inputs)
+
+    
+
+    # Llamar a la función anterior para entrenar la RNA
+    return trainClassANN(topology, (inputs, targets); transferFunctions=transferFunctions, maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate)
+end
+
+
+
+# Datos de ejemplo
+X = rand(10, 100)  # 10 características, 100 patrones
+Y = rand(Bool, 100)  # 100 salidas binarias (0 o 1)
+
+# Convertir los datos a un formato adecuado
+dataset = (X, Y)
+
+# Definir la topología (2 capas ocultas con 5 y 3 neuronas)
+topology = [5, 3]
+
+# Entrenar la red
+rna, losses = trainClassANN(topology, dataset)
+
+# Imprimir las pérdidas de cada época
+println(losses)
 
 
 # ----------------------------------------------------------------------------------------------
