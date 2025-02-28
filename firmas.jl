@@ -29,8 +29,6 @@ oneHotEncoding(feature::AbstractArray{<:Any,1}) = oneHotEncoding(feature, unique
 # Sobrecarga para el caso booleano
 oneHotEncoding(feature::AbstractArray{Bool,1}) = reshape(feature, length(feature), 1)
 
-    
-
 
 
 # Función para calcular los parámetros de normalización MinMax
@@ -122,23 +120,10 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2}, normalizationPara
 end
 
 
-
 function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2})
     normalizationParameters = calculateZeroMeanNormalizationParameters(dataset)
     normalizeZeroMean!(dataset, normalizationParameters)
 end
-
-dataset = [1.0  5.0  3.0;
-           2.0  6.0  3.0;
-           3.0  7.0  3.0]  # La tercera columna es constante
-
-means = mean(dataset, dims=1)
-std_devs = std(dataset, dims=1)
-
-normalizeZeroMean!(dataset, (means, std_devs))
-
-println("Dataset normalizado:")
-println(dataset)
 
 function normalizeZeroMean(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
     dataset_copy = copy(dataset)
@@ -234,36 +219,38 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
 
     # Verificar que las entradas y las salidas no sean Nothing
     if inputs == nothing || targets == nothing
-        throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
+       throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
     end
 
     # Asegurarse de que las entradas estén en Float32
     inputs = convert(Array{Float32}, inputs) 
 
-    targets = convert(Array{Float32}, targets) #para comparar dos float 
+    #targets = convert(Array{Float32}, targets) #para comparar dos float 
 
-    numInputs = size(inputs, 1)   # Filas de `inputs` = Número de características #antes estaba en columnas
-    numOutputs = size(targets, 1) # Filas de `targets` = Número de clases # antes estaba en columnas
+    numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características 
+    numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases 
 
     #Construcción de la RNA
     rna = buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
-
     # Definir el optimizador
     opt_state = Flux.setup(Adam(learningRate), rna) 
 
     #Defino la funcion de perdidas
-    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x)',y') : Losses.crossentropy(rna(x)',y'); #rna al principio no puede estar #
+    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
     
     # Inicializar el vector de pérdidas
     losses = Float32[]
 
+    #Invierto ambas matrices fuera
+    inputs = inputs'
+    targets = targets'
+
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
-    for epoch in 1:maxEpochs
-        
+    for epoch in 1:maxEpoch
+
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
-        currentLoss = loss(inputs, targets) 
+        currentLoss = loss(inputs, targets)
         push!(losses, currentLoss)
-        
         # Verificar si el criterio de parada ha sido alcanzado
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
@@ -271,16 +258,17 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
         end
 
         # Actualizar los pesos mediante backpropagation
-        Flux.train!(loss, rna, [(inputs', targets')], opt_state)
-
+        Flux.train!(loss, rna, [(inputs, targets)], opt_state)
+        
         # Mostrar progreso cada ciertos ciclos
         if epoch % 100 == 0
             println("Epoch: $epoch, Loss: $currentLoss")
         end
     end
-
-    return rna, losses 
+    
+    return rna, losses
 end
+
 
 # Función para el caso de clasificación binaria
 function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; 
@@ -298,37 +286,11 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     targets = reshape(targets, :, 1)
 
     # Asegurar que las entradas sean de tipo Float32
-    inputs = convert(Array{Float32}, inputs)
-
-    
+    inputs = convert(Array{Float32}, inputs) #no deberia hacer falta 
 
     # Llamar a la función anterior para entrenar la RNA
     return trainClassANN(topology, (inputs, targets); transferFunctions=transferFunctions, maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate)
 end
-
-
-#using DelimitedFiles
-#dataset = readdlm("iris.data",',');
-#inputs = ann(inputs);
-#inputs = dataset[:,1:4];
-
-
-# Datos de ejemplo
-X = rand(10, 100)  # 10 características, 100 patrones
-Y = rand(Bool, 100)  # 100 salidas binarias (0 o 1)
-
-# Convertir los datos a un formato adecuado
-dataset = (X, Y)
-
-# Definir la topología (2 capas ocultas con 5 y 3 neuronas)
-topology = [5, 3]
-
-# Entrenar la red
-rna, losses = trainClassANN(topology, dataset)
-
-# Imprimir las pérdidas de cada época
-println(losses)
-
 
 # ----------------------------------------------------------------------------------------------
 # ------------------------------------- Ejercicio 3 --------------------------------------------
@@ -360,7 +322,6 @@ function holdOut(N::Int, Pval::Real, Ptest::Real)
     val_idx = train_val_idx[val_idx]
 
     return train_idx, val_idx, test_idx
-
 end;
 
 function trainClassANN(topology::AbstractArray{<:Int,1},
@@ -369,10 +330,93 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     testDataset::      Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}=(Array{eltype(trainingDataset[1]),2}(undef,0,size(trainingDataset[1],2)), falses(0,size(trainingDataset[2],2))),
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
     maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, maxEpochsVal::Int=20)
-    #
-    # Codigo a desarrollar
-    #
-end;
+    
+    trainingInputs, trainingOutputs = trainingDataset
+    validationInputs, validationOutputs = validationDataset
+    testInputs, testOutputs = testDataset 
+
+    trainingInputs =Float32.(trainingInputs)
+    validationInputs= Float32.(validationInputs)
+    testInputs=Float32.(testInputs)
+    #trainingOutputs =Float32.(trainingOutputs)
+    #validationOutputs= Float32.(ValidationOutputs)
+    #testOutputs=Float32.(testOutputs)
+
+    numInputs = size(trainingInputs,2)
+    numOutputs = size(trainingOutputs,2)
+
+    rna=buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
+    bestANN=deepcopy(rna) #almacenamos la mejor rna para el criterio de parada 
+
+    # Definir el optimizador
+    opt_state = Flux.setup(Adam(learningRate), rna)
+
+    # Definir la función de pérdida
+    loss(x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
+
+    trainLosses=Float32[]
+    validLosses=Float32[]
+    testLosses=Float32[]
+
+    bestValidLoss = Inf 
+    epochSinceBestANN=0
+
+
+    #Loss inicial epoch = 0
+    push!(trainLosses,loss(trainingInputs',trainingOutputs'))
+    
+    # si existe conjunto de validacion, primer loss 
+    if !isempty(validationDataset) 
+        push!(validLosses, loss(validationInputs', validationOutputs'))
+    end
+
+    for epoch in 1:maxEpochs
+        currentLoss= loss(trainingInputs', trainingOutputs')
+        push!(trainLosses,currentLoss)
+
+        if !isempty(validationDataset)
+            validLoss= loss(validationInputs', validationOutputs')
+            push!(validLosses,validLoss)
+
+            if validLoss < bestValidLoss
+                bestANN =deepcopy(rna)
+                epcohSinceBestANN = 0
+            else
+                epcohSinceBestANN +=1
+            end
+        end
+
+        if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
+            push!(testLosses, loss(testInputs', testOutputs'))
+        end 
+
+        #si se ha pasado un conjunto validacion como parametro
+        if !isempty(validationDataset)  
+            print("Ciclo $epoch - Train loss: $currentLoss")
+            print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
+            print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
+            println()
+
+        if currentLoss <= minLoss
+            println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
+            break
+        end
+
+        #Nuevo criterio parada, segun error de validacion 
+        if !isempty(validationInputs) && epochSinceBestANN >= maxEpochsVal
+            println("Parada temprana ya que no hay mejoras en $maxEpochsVal épocas.")
+            break
+        end
+        
+        #backpropagation 
+        Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
+
+    end
+
+     # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
+    return (!isempty(validationInputs) ? bestANN : rna), trainLosses, validLosses, testLosses
+
+end
 
 function trainClassANN(topology::AbstractArray{<:Int,1},
     trainingDataset::  Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}};
@@ -380,9 +424,28 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     testDataset::      Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}=(Array{eltype(trainingDataset[1]),2}(undef,0,size(trainingDataset[1],2)), falses(0)),
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
     maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, maxEpochsVal::Int=20)
-    #
-    # Codigo a desarrollar
-    #
+    
+    
+    # Separar inputs y targets de cada dataset
+    trainingInputs, trainingTargets = trainingDataset
+    validationInputs, validationTargets = validationDataset
+    testInputs, testTargets = testDataset
+
+    # Convertir las salidas (targets) en matrices de una columna
+    trainingTargets = reshape(trainingTargets, :, 1)
+    validationTargets = reshape(validationTargets, :, 1)
+    testTargets = reshape(testTargets, :, 1)
+
+    # Llamar a la versión original de trainClassANN (con targets convertidos a matrices)
+    return trainClassANN(topology, 
+                        (trainingInputs, trainingTargets);
+                        validationDataset=(validationInputs, validationTargets), 
+                        testDataset=(testInputs, testTargets),
+                        transferFunctions=transferFunctions, 
+                        maxEpochs=maxEpochs, 
+                        minLoss=minLoss, 
+                        learningRate=learningRate, 
+                        maxEpochsVal=maxEpochsVal)
 end;
 
 
@@ -428,27 +491,27 @@ function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray
     #
 end;
 
-using SymDoME
+
 
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     #
     # Codigo a desarrollar
     #
-end;
+end
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     #
     # Codigo a desarrollar
     #
-end;
+end
 
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     #
     # Codigo a desarrollar
     #
-end;
+end
 
 
 
@@ -457,8 +520,7 @@ end;
 # ------------------------------------- Ejercicio 5 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-using Random
-using Random:seed!
+
 
 function crossvalidation(N::Int64, k::Int64)
     #
@@ -500,17 +562,16 @@ end;
 # ------------------------------------- Ejercicio 6 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-using MLJ
-using LIBSVM, MLJLIBSVMInterface
-using NearestNeighborModels, MLJDecisionTreeInterface
+#using MLJ
+#using LIBSVM, MLJLIBSVMInterface
+#using NearestNeighborModels, MLJDecisionTreeInterface
 
-SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
-kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
-DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
+#SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
+#kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
+#3DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
 
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
-    #
-    # Codigo a desarrollar
-    #
+   
+end
 end
