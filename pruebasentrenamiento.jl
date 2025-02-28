@@ -25,8 +25,9 @@ using DelimitedFiles
     val_inputs, val_targets = inputs[val_idx, :], targets[val_idx, :]
     test_inputs, test_targets = inputs[test_idx, :], targets[test_idx, :]
 
-    #Calcular los valor de normalizacion de los datos de entrenamiento para normalizar todos los conjuntos 
+    #Calcular los valor de normalizacion de los datos de entrenamiento para normalizar todos los conjuntos
 
+    
 
     #Proceso de entreno 
     trainingDataset = (train_inputs, train_targets)

@@ -223,9 +223,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     end
 
     # Asegurarse de que las entradas estén en Float32
-    inputs = convert(Array{Float32}, inputs) 
-
-    #targets = convert(Array{Float32}, targets) #para comparar dos float 
+    inputs = convert(Array{Float32}, inputs)
 
     numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características 
     numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases 
@@ -236,29 +234,27 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     opt_state = Flux.setup(Adam(learningRate), rna) 
 
     #Defino la funcion de perdidas
-    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
+    loss(rna, x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
     
     # Inicializar el vector de pérdidas
     losses = Float32[]
 
-    #Invierto ambas matrices fuera
-    inputs = inputs'
-    targets = targets'
+    push!(losses,loss(rna,inputs',outputs'))
 
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
     for epoch in 1:maxEpoch
 
+        # Actualizar los pesos mediante backpropagation
+        Flux.train!(loss, rna, [(input', targets')], opt_state)
+        
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
-        currentLoss = loss(inputs, targets)
+        currentLoss = loss(rna, inputs', targets')
         push!(losses, currentLoss)
         # Verificar si el criterio de parada ha sido alcanzado
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
             break
         end
-
-        # Actualizar los pesos mediante backpropagation
-        Flux.train!(loss, rna, [(inputs, targets)], opt_state)
         
         # Mostrar progreso cada ciertos ciclos
         if epoch % 100 == 0
@@ -338,9 +334,6 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     trainingInputs =Float32.(trainingInputs)
     validationInputs= Float32.(validationInputs)
     testInputs=Float32.(testInputs)
-    #trainingOutputs =Float32.(trainingOutputs)
-    #validationOutputs= Float32.(ValidationOutputs)
-    #testOutputs=Float32.(testOutputs)
 
     numInputs = size(trainingInputs,2)
     numOutputs = size(trainingOutputs,2)
@@ -358,7 +351,6 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     validLosses=Float32[]
     testLosses=Float32[]
 
-    bestValidLoss = Inf 
     epochSinceBestANN=0
 
 
@@ -368,6 +360,11 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     # si existe conjunto de validacion, primer loss 
     if !isempty(validationDataset) 
         push!(validLosses, loss(rna ,validationInputs', validationOutputs'))
+        bestValidLoss = validLosses[1]
+    end
+
+    if !isempty(testDataset) 
+        push!(testLosses, loss(rna ,  testInputs', testOutputs'))
     end
 
     for epoch in 1:maxEpochs
@@ -391,14 +388,15 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         end
 
         if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
-            push!(testLosses, loss(rna,testInputs', testOutputs'))
+            testLoss = loss(rna, testInputs', testOutputs')
+            push!(testLosses, testLoss)
         end 
 
         #si se ha pasado un conjunto validacion como parametro
         if !isempty(validationDataset)  
             print("Ciclo $epoch - Train loss: $currentLoss")
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
-            print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
+            print(!isempty(testLosses) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
             println()
         end;
 
@@ -408,7 +406,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         end
 
         #Nuevo criterio parada, segun error de validacion 
-        if !isempty(validationInputs) && epochSinceBestANN >= maxEpochsVal
+        if !isempty(validationInputs) && epochSinceBestANN >= maxEpochsVal 
             println("Parada temprana ya que no hay mejoras en $maxEpochsVal épocas.")
             break
         end
