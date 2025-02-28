@@ -367,6 +367,10 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         push!(testLosses, loss(rna ,  testInputs', testOutputs'))
     end
 
+    if !isempty(testDataset)
+        push!(testLosses, loss(rna, testInputs', testOutputs'))
+    end
+    
     for epoch in 1:maxEpochs
         #backpropagation 
         Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
