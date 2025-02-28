@@ -352,7 +352,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     opt_state = Flux.setup(Adam(learningRate), rna)
 
     # Definir la función de pérdida
-    loss(x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
+    loss(rna, x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
 
     trainLosses=Float32[]
     validLosses=Float32[]
@@ -363,31 +363,35 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
 
 
     #Loss inicial epoch = 0
-    push!(trainLosses,loss(trainingInputs',trainingOutputs'))
+    push!(trainLosses,loss(rna, trainingInputs',trainingOutputs'))
     
     # si existe conjunto de validacion, primer loss 
     if !isempty(validationDataset) 
-        push!(validLosses, loss(validationInputs', validationOutputs'))
+        push!(validLosses, loss(rna ,validationInputs', validationOutputs'))
     end
 
     for epoch in 1:maxEpochs
-        currentLoss= loss(trainingInputs', trainingOutputs')
-        push!(trainLosses,currentLoss)
+        #backpropagation 
+        Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
 
+        currentLoss= loss(rna, trainingInputs', trainingOutputs')
+        push!(trainLosses,currentLoss)
+  
         if !isempty(validationDataset)
-            validLoss= loss(validationInputs', validationOutputs')
+            validLoss= loss(rna,validationInputs', validationOutputs')
             push!(validLosses,validLoss)
 
             if validLoss < bestValidLoss
                 bestANN =deepcopy(rna)
-                epochSinceBestANNSinceBestANN = 0
+                bestValidLoss = validLoss
+                epochSinceBestANN = 0
             else
                 epochSinceBestANN +=1
             end
         end
 
         if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
-            push!(testLosses, loss(testInputs', testOutputs'))
+            push!(testLosses, loss(rna,testInputs', testOutputs'))
         end 
 
         #si se ha pasado un conjunto validacion como parametro
@@ -396,6 +400,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
             print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
             println()
+        end;
 
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
@@ -408,9 +413,6 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
             break
         end
         
-        #backpropagation 
-        Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
-
     end
 
      # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
@@ -573,5 +575,4 @@ end;
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
    
-end
-end
+end;
