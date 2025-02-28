@@ -144,7 +144,7 @@ function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
 end;
 
 function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
-    if size(targets, 2) == 1# dimensiones de la matriz solo una columna
+    if size(outputs, 2) == 1# dimensiones de la matriz solo una columna #habia targets aqui previamente en vez de outputs
         return reshape(classifyOutputs(outputs[:], threshold=threshold),:,1 ) #coge todas las filas y la primera columna 
     else 
         (_, indicesMaxEachInstance) = findmax(outputs, dims=2);
@@ -175,7 +175,7 @@ end;
 
 function accuracy(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5)
     if size(targets, 2) == 1 
-        return accuracy(vec(outputs), vec(targets))
+        return accuracy(outputs[:,1], targets[:,1], threshold=threshold) #introduzco [] vectorizarización manual y threshold que no estaba definido 
     else
         classifiedOutputs = classifyOutputs(outputs)
         return accuracy(targets, classifiedOutputs)
@@ -380,9 +380,9 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
 
             if validLoss < bestValidLoss
                 bestANN =deepcopy(rna)
-                epcohSinceBestANN = 0
+                epochSinceBestANNSinceBestANN = 0
             else
-                epcohSinceBestANN +=1
+                epochSinceBestANN +=1
             end
         end
 
