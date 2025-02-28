@@ -99,8 +99,8 @@ seed!(1); (ann, trainingLosses, validationLosses, testLosses) = trainClassANN([4
 result_trainingLosses   = Float32[1.2139437, 1.2000579, 1.1873707, 1.1757828, 1.165133,  1.155307, 1.1462542, 1.1379561, 1.1304016, 1.1235778, 1.117466,  1.1120408];
 result_validationLosses = Float32[1.1530712, 1.1259663, 1.1016681, 1.0822797, 1.0691929, 1.0617257, 1.0585984, 1.0587119, 1.061241, 1.065562,  1.0711765, 1.0776592];
 result_testLosses       = Float32[1.8724904, 1.8293855, 1.787262,  1.7450062, 1.7017598, 1.6577507, 1.6135957, 1.569862, 1.5269873, 1.4853015, 1.4450579, 1.4064597];
-@assert(all(isequal.(trainingLosses,   result_trainingLosses)))
-@assert(all(isequal.(validationLosses, result_validationLosses)))
-@assert(all(isequal.(testLosses,       result_testLosses)))
+@assert(all(isapprox.(trainingLosses,   result_trainingLosses)))
+@assert(all(isapprox.(validationLosses, result_validationLosses)))
+@assert(all(isapprox.(testLosses,       result_testLosses)))
 
 

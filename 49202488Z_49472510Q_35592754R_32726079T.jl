@@ -370,6 +370,10 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         push!(validLosses, loss(rna ,validationInputs', validationOutputs'))
     end
 
+    if !isempty(testDataset)
+        push!(testLosses, loss(rna, testInputs', testOutputs'))
+    end
+    
     for epoch in 1:maxEpochs
         #backpropagation 
         Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
@@ -398,7 +402,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         if !isempty(validationDataset)  
             print("Ciclo $epoch - Train loss: $currentLoss")
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
-            print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
+            print(!isempty(testLosses) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
             println()
         end;
 
