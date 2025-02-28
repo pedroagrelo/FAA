@@ -2,9 +2,17 @@
 
 # Archivo de pruebas para realizar autoevaluación de algunas funciones de los ejercicios
 
+<<<<<<< HEAD
 # Importamos el archivo con las soluciones a los ejercicios
 include("firmas.jl");
 #   Cambiar "soluciones.jl" por el nombre del archivo que contenga las funciones a desarrollar
+=======
+include("49202488Z_49472510Q_35592754R_32726079T.jl");# Importamos el archivo con las soluciones a los ejercicios
+
+#   Cambiar "soluciones.jl" por el nombre del archivo que contenga las funciones desarrolladas
+
+
+>>>>>>> 6ea323f1f99252691abb06c71ba45314b8634ec3
 
 # Fichero de pruebas realizado con la versión 1.11.2 de Julia
 println(VERSION)

@@ -228,7 +228,11 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     #targets = convert(Array{Float32}, targets) #para comparar dos float 
 
     numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características 
+<<<<<<< HEAD
     numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases 
+=======
+    numOutputs = size(targets,2) # Columnas de `targets` = Número de clases 
+>>>>>>> 6ea323f1f99252691abb06c71ba45314b8634ec3
 
     #Construcción de la RNA
     rna = buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
@@ -249,7 +253,11 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     for epoch in 1:maxEpoch
 
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
+<<<<<<< HEAD
         currentLoss = loss(inputs, targets)
+=======
+        currentLoss = loss(inputs', targets') 
+>>>>>>> 6ea323f1f99252691abb06c71ba45314b8634ec3
         push!(losses, currentLoss)
         # Verificar si el criterio de parada ha sido alcanzado
         if currentLoss <= minLoss
@@ -292,6 +300,33 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     return trainClassANN(topology, (inputs, targets); transferFunctions=transferFunctions, maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate)
 end
 
+<<<<<<< HEAD
+=======
+
+#using DelimitedFiles
+#dataset = readdlm("iris.data",',');
+#inputs = ann(inputs);
+#inputs = dataset[:,1:4];
+
+
+# Datos de ejemplo
+X = rand(10, 100)  # 10 características, 100 patrones
+Y = rand(Bool, 100)  # 100 salidas binarias (0 o 1)
+
+# Convertir los datos a un formato adecuado
+dataset = (X, Y)
+
+# Definir la topología (2 capas ocultas con 5 y 3 neuronas)
+topology = [5, 3]
+
+# Entrenar la red
+rna, losses = trainClassANN(topology, dataset)  
+
+# Imprimir las pérdidas de cada época
+println(losses)
+
+
+>>>>>>> 6ea323f1f99252691abb06c71ba45314b8634ec3
 # ----------------------------------------------------------------------------------------------
 # ------------------------------------- Ejercicio 3 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
@@ -425,6 +460,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
     maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, maxEpochsVal::Int=20)
     
+<<<<<<< HEAD
     
     # Separar inputs y targets de cada dataset
     trainingInputs, trainingTargets = trainingDataset
@@ -446,6 +482,8 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
                         minLoss=minLoss, 
                         learningRate=learningRate, 
                         maxEpochsVal=maxEpochsVal)
+=======
+>>>>>>> 6ea323f1f99252691abb06c71ba45314b8634ec3
 end;
 
 
