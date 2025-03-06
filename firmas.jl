@@ -218,7 +218,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     inputs, targets = dataset # separo la tupla de dos matrices que viene como parametro 
 
     # Verificar que las entradas y las salidas no sean Nothing
-    if inputs == nothing || targets == nothing
+    if inputs === nothing || targets === nothing
        throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
     end
 
@@ -278,7 +278,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     inputs, targets = dataset
 
     # Verificar que las entradas y las salidas no sean Nothing
-    if inputs == nothing || targets == nothing
+    if inputs === nothing || targets === nothing
         throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
     end
 
@@ -450,45 +450,79 @@ end;
 
 
 
-# ----------------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------- 
 # ------------------------------------- Ejercicio 4 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-
 function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
-    #
-    # Codigo a desarrollar
-    #
-end;
+    VP = sum(outputs .& targets)
+    VN = sum(.!outputs .& .!targets)
+    FP = sum(outputs .& .!targets)
+    FN = sum(.!outputs .& targets)
 
-function confusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
-    #
-    # Codigo a desarrollar
-    #
+    accuracy = (VP + VN) / (VP + VN + FP + FN)
+    error_rate = 1 - accuracy
+    sensitivity = VP == 0 && FN == 0 ? 1.0 : VP / (VP + FN)
+    specificity = VN == 0 && FP == 0 ? 1.0 : VN / (VN + FP)
+    precision = VP == 0 && FP == 0 ? 1.0 : VP / (VP + FP)
+    npv = VN == 0 && FN == 0 ? 1.0 : VN / (VN + FN)
+    f1_score = (precision == 0 && sensitivity == 0) ? 0.0 : (2 * precision * sensitivity) / (precision + sensitivity)
+
+    return accuracy, error_rate, sensitivity, specificity, precision, npv, f1_score, [VN FP; FN VP]
 end;
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
+    n = size(outputs, 2)
+
+    # Calculamos las métricas para cada columna
+    metrics = [confusionMatrix(outputs[:, i], targets[:, i]) for i in 1:n]
+    matrices = [metrics[i][8] for i in 1:n]  # Matrices de confusión
+
+    if weighted
+        weights = sum(targets, dims=1) ./ sum(targets)  # Pesos basados en la cantidad de etiquetas positivas por clase
+    else
+        weights = fill(1.0 / n, n)  # Pesos iguales si no se especifica 'weighted'
+    end
+
+    # Convertimos las métricas a Array para poder sumarlas
+    weighted_metrics = zeros(Float64, 7)  # Inicializamos un vector de 7 elementos para las métricas ponderadas
+    for i in 1:n
+        metrics_array = collect(metrics[i][1:7])  # Convertimos la tupla en un Array
+        weighted_metrics .= weighted_metrics .+ metrics_array .* weights[i]
+    end
+
+    total_matrix = sum(matrices)  # Matriz total de confusión
+
+    return weighted_metrics, total_matrix
 end;
 
+
+
+
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
+    bin_outputs = outputs .>= threshold
+    return confusionMatrix(bin_outputs, targets; weighted=weighted)
 end;
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
+    n = length(classes)
+    confusion = zeros(Int64, n, n)
+
+    for (o, t) in zip(outputs, targets)
+        i = findfirst(classes .== o)
+        j = findfirst(classes .== t)
+        confusion[i, j] += 1
+    end
+
+    accuracy = sum(diag(confusion)) / sum(confusion)
+
+    return accuracy, confusion
 end;
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
+    classes = unique(vcat(outputs, targets))
+    return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end;
 
 
