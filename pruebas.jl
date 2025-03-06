@@ -17,9 +17,4 @@ println(losses)
 
 #println(size(Y), " ", typeof(Y))  
 #println("dataset: ", dataset)  # Ver qué tiene `dataset`
-<<<<<<< HEAD
 #println(typeof(dataset))  # Ver qué tiene `dataset`
-=======
-#println(typeof(dataset))  # Ver qué tiene `dataset`
-
->>>>>>> 6ea323f1f99252691abb06c71ba45314b8634ec3
