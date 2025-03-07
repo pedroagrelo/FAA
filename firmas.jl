@@ -478,10 +478,106 @@ function confusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArra
     return confusionMatrix(bin_outputs, targets)
 end
 
+function printConfusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
+    # Llamamos a la función confusionMatrix para obtener los resultados
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets)
+    
+    # Mostramos los resultados por pantalla
+    println("Confusion Matrix:")
+    println(confMatrix)
+    
+    println("\nResultados:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+end
+
+function printConfusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
+    # Llamamos a la función confusionMatrix para convertir los outputs en valores binarios
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets; threshold=threshold)
+    
+    # Mostramos los resultados por pantalla
+    println("Confusion Matrix:")
+    println(confMatrix)
+    
+    println("\nResultados:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+end
+
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
-   
+    n_classes = size(outputs, 2)
+
+    # Inicialización de las métricas para cada clase
+    sensitivities = zeros(n_classes)
+    specificities = zeros(n_classes)
+    precisions = zeros(n_classes)
+    npvs = zeros(n_classes)
+    F1s = zeros(n_classes)
+
+    # Llamada a la función de la práctica anterior para cada clase
+    for i in 1:n_classes
+        tp = sum(outputs[:,i] .& targets[:,i])         # Verdaderos positivos
+        tn = sum((.!outputs[:,i]) .& (.!targets[:,i])) # Verdaderos negativos
+        fp = sum(outputs[:,i] .& (.!targets[:,i]))     # Falsos positivos
+        fn = sum((.!outputs[:,i]) .& targets[:,i])     # Falsos negativos
+        
+        sensitivity = tp / (tp + fn)
+        specificity = tn / (tn + fp)
+        precision = tp / (tp + fp)
+        npv = tn / (tn + fn)
+        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+        
+        # Asignación de métricas a las variables
+        sensitivities[i] = sensitivity
+        specificities[i] = specificity
+        precisions[i] = precision
+        npvs[i] = npv
+        F1s[i] = F1
+    end
+
+    # Calcular la matriz de confusión
+    confMatrix = [sum(outputs[:, i] .& targets[:, j]) for i in 1:n_classes, j in 1:n_classes]
+
+    # Calcular métricas ponderadas o macro
+    if weighted
+        class_counts = vec(sum(targets, dims=1))  # Número de instancias por clase
+        total = sum(class_counts)
+        
+        # Cálculo ponderado
+        weighted_sensitivity = sum(sensitivities .* class_counts) / total
+        weighted_specificity = sum(specificities .* class_counts) / total
+        weighted_precision = sum(precisions .* class_counts) / total
+        weighted_npvs = sum(npvs .* class_counts) / total
+        weighted_F1 = sum(F1s .* class_counts) / total
+        accuracy = weighted_sensitivity  # Usamos sensibilidad ponderada como precisión
+    else
+        accuracy = mean(sensitivities)
+        weighted_sensitivity = mean(sensitivities)
+        weighted_specificity = mean(specificities)
+        weighted_precision = mean(precisions)
+        weighted_npvs = mean(npvs)
+        weighted_F1 = mean(F1s)
+    end
+
+    errorRate = 1 - accuracy
+
+    return accuracy, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
 end
+
+
+
+
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
 end
