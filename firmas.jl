@@ -456,74 +456,43 @@ end;
 # ----------------------------------------------------------------------------------------------
 
 function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
-    VP = sum(outputs .& targets)
-    VN = sum(.!outputs .& .!targets)
-    FP = sum(outputs .& .!targets)
-    FN = sum(.!outputs .& targets)
+    VN = sum(.!outputs .& .!targets)  # Verdaderos Negativos
+    VP = sum(outputs .& targets)      # Verdaderos Positivos
+    FP = sum(outputs .& .!targets)    # Falsos Positivos
+    FN = sum(.!outputs .& targets)    # Falsos Negativos
 
     accuracy = (VP + VN) / (VP + VN + FP + FN)
-    error_rate = 1 - accuracy
-    sensitivity = VP == 0 && FN == 0 ? 1.0 : VP / (VP + FN)
-    specificity = VN == 0 && FP == 0 ? 1.0 : VN / (VN + FP)
-    precision = VP == 0 && FP == 0 ? 1.0 : VP / (VP + FP)
-    npv = VN == 0 && FN == 0 ? 1.0 : VN / (VN + FN)
-    f1_score = (precision == 0 && sensitivity == 0) ? 0.0 : (2 * precision * sensitivity) / (precision + sensitivity)
+    errorRate = 1 - accuracy
 
-    return accuracy, error_rate, sensitivity, specificity, precision, npv, f1_score, [VN FP; FN VP]
-end;
+    sensitivity = (VP + FN == 0) ? 1.0 : VP / (VP + FN)
+    specificity = (VN + FP == 0) ? 1.0 : VN / (VN + FP)
+    precision = (VP + FP == 0) ? 1.0 : VP / (VP + FP)
+    npv = (VN + FN == 0) ? 1.0 : VN / (VN + FN)
+    F1 = (precision + sensitivity == 0) ? 0.0 : 2 * (precision * sensitivity) / (precision + sensitivity)
+
+    return accuracy, errorRate, sensitivity, specificity, precision, npv, F1, [VN FP; FN VP]
+end
+
+function confusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
+    bin_outputs = outputs .>= threshold
+    return confusionMatrix(bin_outputs, targets)
+end
+
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
-    n = size(outputs, 2)
-
-    # Calculamos las métricas para cada columna
-    metrics = [confusionMatrix(outputs[:, i], targets[:, i]) for i in 1:n]
-    matrices = [metrics[i][8] for i in 1:n]  # Matrices de confusión
-
-    if weighted
-        weights = sum(targets, dims=1) ./ sum(targets)  # Pesos basados en la cantidad de etiquetas positivas por clase
-    else
-        weights = fill(1.0 / n, n)  # Pesos iguales si no se especifica 'weighted'
-    end
-
-    # Convertimos las métricas a Array para poder sumarlas
-    weighted_metrics = zeros(Float64, 7)  # Inicializamos un vector de 7 elementos para las métricas ponderadas
-    for i in 1:n
-        metrics_array = collect(metrics[i][1:7])  # Convertimos la tupla en un Array
-        weighted_metrics .= weighted_metrics .+ metrics_array .* weights[i]
-    end
-
-    total_matrix = sum(matrices)  # Matriz total de confusión
-
-    return weighted_metrics, total_matrix
-end;
-
-
-
+   
+end
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    bin_outputs = outputs .>= threshold
-    return confusionMatrix(bin_outputs, targets; weighted=weighted)
-end;
+end
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-    n = length(classes)
-    confusion = zeros(Int64, n, n)
-
-    for (o, t) in zip(outputs, targets)
-        i = findfirst(classes .== o)
-        j = findfirst(classes .== t)
-        confusion[i, j] += 1
-    end
-
-    accuracy = sum(diag(confusion)) / sum(confusion)
-
-    return accuracy, confusion
-end;
+   
+end
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-    classes = unique(vcat(outputs, targets))
-    return confusionMatrix(outputs, targets, classes; weighted=weighted)
-end;
+   
+end
 
 
 
