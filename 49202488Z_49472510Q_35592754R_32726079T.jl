@@ -18,7 +18,7 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
         return reshape(feature .== classes[1], num_samples, 1) #NUM SAMPLE FILAS 1 columna
     else
         # Caso multiclase: Crear una matriz de valores booleanos one-hot# Comparar con cada clase y asignar
-        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...)')   
+        return convert(BitArray{2}, hcat([feature.== cl for cl in classes]...))   
     end
 end
 
@@ -28,8 +28,6 @@ oneHotEncoding(feature::AbstractArray{<:Any,1}) = oneHotEncoding(feature, unique
 
 # Sobrecarga para el caso booleano
 oneHotEncoding(feature::AbstractArray{Bool,1}) = reshape(feature, length(feature), 1)
-
-    
 
 
 
@@ -115,10 +113,10 @@ end
 
 function normalizeZeroMean!(dataset::AbstractArray{<:Real, 2}, normalizationParameters::NTuple{2, AbstractArray{<:Real, 2}})
     means, std_devs = normalizationParameters
-    means=Matrix(means)
-    std_devs=Matrix(std_devs)
     dataset .-= means
-    dataset .*= 1 ./ std_devs
+    dataset ./= std_devs
+    dataset[:, vec(std_devs .== 0)] .= 0
+    return dataset
 end
 
 
@@ -144,8 +142,8 @@ function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
 end;
 
 function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
-    if size(outputs,2) == 1 # dimensiones de la matriz solo una columna
-        return reshape(classifyOutputs(outputs[:], threshold=threshold),num_rows,1 )
+    if size(targets, 2) == 1# dimensiones de la matriz solo una columna
+        return reshape(classifyOutputs(outputs[:], threshold=threshold),:,1 ) #coge todas las filas y la primera columna 
     else 
         (_, indicesMaxEachInstance) = findmax(outputs, dims=2);
         classified = falses(size(outputs));
@@ -155,30 +153,30 @@ function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
 end;
 
 function accuracy(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
-    return mean((outputs .== targets)) 
+    return mean((outputs .== targets))
 end;
 
 function accuracy(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2})
-    if size(targets, 2) == 1 
-        return accuracy(vec(outputs), vec(targets')) 
+    if size(targets, 2) == 1 # columnas = 2?  || size(outputs, 2) == 2
+        return accuracy(vec(outputs), vec(targets)) #array multidimensional a columna 
     else
-        classComparison = targets' .== outputs
+        classComparison = targets .== outputs
         correctClassifications = all(classComparison, dims=2)
-        accuracy = mean(correctClassifications) 
-        return accuracy 
+        precision = mean(correctClassifications) 
+        return precision
     end
 end;
 
 function accuracy(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
-        return accuracy(outputs, targets' .>= threshold)
+        return accuracy(outputs .>= threshold, targets)
 end;
 
 function accuracy(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5)
-    if size(targets', 2) == 1 
-        return accuracy(vec(outputs), vec(targets'))
+    if size(targets, 2) == 1 
+        return accuracy(vec(outputs), vec(targets))
     else
         classifiedOutputs = classifyOutputs(outputs)
-        return accuracy(targets', classifiedOutputs)
+        return accuracy(targets, classifiedOutputs)
     end
 end;
 
@@ -208,22 +206,91 @@ function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutp
     end
 
     return ann
-
-  
+    
 end;
 
-function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-    #
-    # Codigo a desarrollar
-    #
-end;
 
-function trainClassANN(topology::AbstractArray{<:Int,1}, (inputs, targets)::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
-    #
-    # Codigo a desarrollar
-    #
-end;
 
+function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}; 
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
+    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
+    
+    inputs, targets = dataset # separo la tupla de dos matrices que viene como parametro 
+
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs === nothing || targets === nothing
+       throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
+    end
+
+    # Asegurarse de que las entradas estén en Float32
+    inputs = convert(Array{Float32}, inputs) 
+
+    #targets = convert(Array{Float32}, targets) #para comparar dos float 
+
+    numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características 
+    numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases 
+
+    #Construcción de la RNA
+    rna = buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
+    # Definir el optimizador
+    opt_state = Flux.setup(Adam(learningRate), rna) 
+
+    #Defino la funcion de perdidas
+    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
+    
+    # Inicializar el vector de pérdidas
+    losses = Float32[]
+
+    #Invierto ambas matrices fuera
+    inputs = inputs'
+    targets = targets'
+
+    # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
+    for epoch in 1:maxEpoch
+
+        # Calcular el valor de la pérdida en el conjunto de entrenamiento
+        currentLoss = loss(inputs, targets)
+        push!(losses, currentLoss)
+        # Verificar si el criterio de parada ha sido alcanzado
+        if currentLoss <= minLoss
+            println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
+            break
+        end
+
+        # Actualizar los pesos mediante backpropagation
+        Flux.train!(loss, rna, [(inputs, targets)], opt_state)
+        
+        # Mostrar progreso cada ciertos ciclos
+        if epoch % 100 == 0
+            println("Epoch: $epoch, Loss: $currentLoss")
+        end
+    end
+    
+    return rna, losses
+end
+
+
+# Función para el caso de clasificación binaria
+function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}; 
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)), 
+    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01)
+
+    inputs, targets = dataset
+
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs === nothing || targets === nothing
+        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+    end
+
+    # Convertir las salidas (en caso de clasificación binaria) a una matriz de una columna
+    targets = reshape(targets, :, 1)
+
+    # Asegurar que las entradas sean de tipo Float32
+    inputs = convert(Array{Float32}, inputs) #no deberia hacer falta 
+
+    # Llamar a la función anterior para entrenar la RNA
+    return trainClassANN(topology, (inputs, targets); transferFunctions=transferFunctions, maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate)
+end
 
 # ----------------------------------------------------------------------------------------------
 # ------------------------------------- Ejercicio 3 --------------------------------------------
@@ -263,10 +330,93 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     testDataset::      Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}=(Array{eltype(trainingDataset[1]),2}(undef,0,size(trainingDataset[1],2)), falses(0,size(trainingDataset[2],2))),
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
     maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, maxEpochsVal::Int=20)
-    #
-    # Codigo a desarrollar
-    #
-end;
+    
+    trainingInputs, trainingOutputs = trainingDataset
+    validationInputs, validationOutputs = validationDataset
+    testInputs, testOutputs = testDataset 
+
+    trainingInputs =Float32.(trainingInputs)
+    validationInputs= Float32.(validationInputs)
+    testInputs=Float32.(testInputs)
+    #trainingOutputs =Float32.(trainingOutputs)
+    #validationOutputs= Float32.(ValidationOutputs)
+    #testOutputs=Float32.(testOutputs)
+
+    numInputs = size(trainingInputs,2)
+    numOutputs = size(trainingOutputs,2)
+
+    rna=buildClassANN(numInputs, topology, numOutputs, transferFunctions=transferFunctions)
+    bestANN=deepcopy(rna) #almacenamos la mejor rna para el criterio de parada 
+
+    # Definir el optimizador
+    opt_state = Flux.setup(Adam(learningRate), rna)
+
+    # Definir la función de pérdida
+    loss(x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
+
+    trainLosses=Float32[]
+    validLosses=Float32[]
+    testLosses=Float32[]
+
+    bestValidLoss = Inf 
+    epochSinceBestANN=0
+
+
+    #Loss inicial epoch = 0
+    push!(trainLosses,loss(trainingInputs',trainingOutputs'))
+    
+    # si existe conjunto de validacion, primer loss 
+    if !isempty(validationDataset) 
+        push!(validLosses, loss(validationInputs', validationOutputs'))
+    end
+
+    for epoch in 1:maxEpochs
+        currentLoss= loss(trainingInputs', trainingOutputs')
+        push!(trainLosses,currentLoss)
+
+        if !isempty(validationDataset)
+            validLoss= loss(validationInputs', validationOutputs')
+            push!(validLosses,validLoss)
+
+            if validLoss < bestValidLoss
+                bestANN =deepcopy(rna)
+                epcohSinceBestANN = 0
+            else
+                epcohSinceBestANN +=1
+            end
+        end
+
+        if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
+            push!(testLosses, loss(testInputs', testOutputs'))
+        end 
+
+        #si se ha pasado un conjunto validacion como parametro
+        if !isempty(validationDataset)  
+            print("Ciclo $epoch - Train loss: $currentLoss")
+            print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
+            print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
+            println()
+
+        if currentLoss <= minLoss
+            println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
+            break
+        end
+
+        #Nuevo criterio parada, segun error de validacion 
+        if !isempty(validationInputs) && epochSinceBestANN >= maxEpochsVal
+            println("Parada temprana ya que no hay mejoras en $maxEpochsVal épocas.")
+            break
+        end
+        
+        #backpropagation 
+        Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
+
+    end
+
+     # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
+    return (!isempty(validationInputs) ? bestANN : rna), trainLosses, validLosses, testLosses
+
+end
 
 function trainClassANN(topology::AbstractArray{<:Int,1},
     trainingDataset::  Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}};
@@ -274,75 +424,193 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     testDataset::      Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}=(Array{eltype(trainingDataset[1]),2}(undef,0,size(trainingDataset[1],2)), falses(0)),
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
     maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, maxEpochsVal::Int=20)
-    #
-    # Codigo a desarrollar
-    #
+    
+    
+    # Separar inputs y targets de cada dataset
+    trainingInputs, trainingTargets = trainingDataset
+    validationInputs, validationTargets = validationDataset
+    testInputs, testTargets = testDataset
+
+    # Convertir las salidas (targets) en matrices de una columna
+    trainingTargets = reshape(trainingTargets, :, 1)
+    validationTargets = reshape(validationTargets, :, 1)
+    testTargets = reshape(testTargets, :, 1)
+
+    # Llamar a la versión original de trainClassANN (con targets convertidos a matrices)
+    return trainClassANN(topology, 
+                        (trainingInputs, trainingTargets);
+                        validationDataset=(validationInputs, validationTargets), 
+                        testDataset=(testInputs, testTargets),
+                        transferFunctions=transferFunctions, 
+                        maxEpochs=maxEpochs, 
+                        minLoss=minLoss, 
+                        learningRate=learningRate, 
+                        maxEpochsVal=maxEpochsVal)
 end;
 
 
 
-# ----------------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------- 
 # ------------------------------------- Ejercicio 4 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-
 function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
-    #
-    # Codigo a desarrollar
-    #
-end;
+    VN = sum(.!outputs .& .!targets)  # Verdaderos Negativos
+    VP = sum(outputs .& targets)      # Verdaderos Positivos
+    FP = sum(outputs .& .!targets)    # Falsos Positivos
+    FN = sum(.!outputs .& targets)    # Falsos Negativos
+
+    accuracy = (VP + VN) / (VP + VN + FP + FN)
+    errorRate = 1 - accuracy
+
+    sensitivity = (VP + FN == 0) ? 1.0 : VP / (VP + FN)
+    specificity = (VN + FP == 0) ? 1.0 : VN / (VN + FP)
+    precision = (VP + FP == 0) ? 1.0 : VP / (VP + FP)
+    npv = (VN + FN == 0) ? 1.0 : VN / (VN + FN)
+    F1 = (precision + sensitivity == 0) ? 0.0 : 2 * (precision * sensitivity) / (precision + sensitivity)
+
+    return accuracy, errorRate, sensitivity, specificity, precision, npv, F1, [VN FP; FN VP]
+end
 
 function confusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
-    #
-    # Codigo a desarrollar
-    #
-end;
+    bin_outputs = outputs .>= threshold
+    return confusionMatrix(bin_outputs, targets)
+end
+
+function printConfusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
+    # Llamamos a la función confusionMatrix para obtener los resultados
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets)
+    
+    # Mostramos los resultados por pantalla
+    println("Confusion Matrix:")
+    println(confMatrix)
+    
+    println("\nResultados:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+end
+
+function printConfusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
+    # Llamamos a la función confusionMatrix para convertir los outputs en valores binarios
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets; threshold=threshold)
+    
+    # Mostramos los resultados por pantalla
+    println("Confusion Matrix:")
+    println(confMatrix)
+    
+    println("\nResultados:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+end
+
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
-end;
+    n_classes = size(outputs, 2)
+
+    # Inicialización de las métricas para cada clase
+    sensitivities = zeros(n_classes)
+    specificities = zeros(n_classes)
+    precisions = zeros(n_classes)
+    npvs = zeros(n_classes)
+    F1s = zeros(n_classes)
+
+    # Llamada a la función de la práctica anterior para cada clase
+    for i in 1:n_classes
+        tp = sum(outputs[:,i] .& targets[:,i])         # Verdaderos positivos
+        tn = sum((.!outputs[:,i]) .& (.!targets[:,i])) # Verdaderos negativos
+        fp = sum(outputs[:,i] .& (.!targets[:,i]))     # Falsos positivos
+        fn = sum((.!outputs[:,i]) .& targets[:,i])     # Falsos negativos
+        
+        sensitivity = tp / (tp + fn)
+        specificity = tn / (tn + fp)
+        precision = tp / (tp + fp)
+        npv = tn / (tn + fn)
+        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+        
+        # Asignación de métricas a las variables
+        sensitivities[i] = sensitivity
+        specificities[i] = specificity
+        precisions[i] = precision
+        npvs[i] = npv
+        F1s[i] = F1
+    end
+
+    # Calcular la matriz de confusión
+    confMatrix = [sum(outputs[:, i] .& targets[:, j]) for i in 1:n_classes, j in 1:n_classes]
+
+    # Calcular métricas ponderadas o macro
+    if weighted
+        class_counts = vec(sum(targets, dims=1))  # Número de instancias por clase
+        total = sum(class_counts)
+        
+        # Cálculo ponderado
+        weighted_sensitivity = sum(sensitivities .* class_counts) / total
+        weighted_specificity = sum(specificities .* class_counts) / total
+        weighted_precision = sum(precisions .* class_counts) / total
+        weighted_npvs = sum(npvs .* class_counts) / total
+        weighted_F1 = sum(F1s .* class_counts) / total
+        accuracy = weighted_sensitivity  # Usamos sensibilidad ponderada como precisión
+    else
+        accuracy = mean(sensitivities)
+        weighted_sensitivity = mean(sensitivities)
+        weighted_specificity = mean(specificities)
+        weighted_precision = mean(precisions)
+        weighted_npvs = mean(npvs)
+        weighted_F1 = mean(F1s)
+    end
+
+    errorRate = 1 - accuracy
+
+    return accuracy, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
+end
+
+
+
+
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
-end;
+end
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
-end;
+   
+end
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-    #
-    # Codigo a desarrollar
-    #
-end;
+   
+end
 
-using SymDoME
+
 
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     #
     # Codigo a desarrollar
     #
-end;
+end
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     #
     # Codigo a desarrollar
     #
-end;
+end
 
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     #
     # Codigo a desarrollar
     #
-end;
+end
 
 
 
@@ -351,8 +619,7 @@ end;
 # ------------------------------------- Ejercicio 5 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-using Random
-using Random:seed!
+
 
 function crossvalidation(N::Int64, k::Int64)
     #
@@ -394,17 +661,16 @@ end;
 # ------------------------------------- Ejercicio 6 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-using MLJ
-using LIBSVM, MLJLIBSVMInterface
-using NearestNeighborModels, MLJDecisionTreeInterface
+#using MLJ
+#using LIBSVM, MLJLIBSVMInterface
+#using NearestNeighborModels, MLJDecisionTreeInterface
 
-SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
-kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
-DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
+#SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
+#kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
+#3DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
 
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
-    #
-    # Codigo a desarrollar
-    #
+   
+end
 end
