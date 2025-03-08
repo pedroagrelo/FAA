@@ -582,12 +582,25 @@ end
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
 end
 
-function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-   
+function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
+    # Verificar que todas las etiquetas en outputs y targets estén en el vector de clases
+    classes = unique(vcat(outputs, targets))
+    @assert all([in(label, classes) for label in vcat(outputs, targets)]) "Algunas etiquetas no están en el vector de clases."
+
+    # Convertir las etiquetas categóricas a one-hot encoding
+    outputs_onehot = oneHotEncoding(outputs, classes)
+    targets_onehot = oneHotEncoding(targets, classes)
+
+    # Llamar a la función principal con las matrices one-hot
+    return confusionMatrix(outputs_onehot, targets_onehot; weighted=weighted)
 end
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-   
+    # Calcular las clases únicas a partir de outputs y targets
+    classes = unique(vcat(outputs, targets))
+
+    # Llamar a la tercera función con las clases calculadas
+    return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end
 
 
