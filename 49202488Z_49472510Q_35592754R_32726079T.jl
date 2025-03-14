@@ -396,6 +396,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
             print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
             println()
+        end
 
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
@@ -575,19 +576,31 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
     return accuracy, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
 end
 
-
-
-
-
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
+    # Convertir las salidas reales en booleanos usando el umbral
+    outputs_bool = outputs .>= threshold
+    # Llamar a la función principal de confusionMatrix para matrices booleanas
+    return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-   
+    # Verificar que todas las etiquetas estén en el vector de clases
+    @assert all([in(label, classes) for label in vcat(targets, outputs)])
+    
+    # Convertir las salidas y objetivos a one-hot encoding
+    outputs_encoded = oneHotEncoding(outputs, classes)
+    targets_encoded = oneHotEncoding(targets, classes)
+    
+    # Llamar a la función principal de confusionMatrix para matrices booleanas
+    return confusionMatrix(outputs_encoded, targets_encoded; weighted=weighted)
 end
 
+# Función para clasificación multiclase con clases calculadas automáticamente
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-   
+    # Calcular las clases únicas a partir de las salidas y objetivos
+    classes = unique(vcat(targets, outputs))
+    # Llamar a la función anterior que requiere las clases como argumento
+    return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end
 
 
@@ -672,5 +685,4 @@ end;
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
    
-end
 end
