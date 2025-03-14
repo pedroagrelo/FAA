@@ -396,6 +396,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
             print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
             println()
+        end
 
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
@@ -591,25 +592,88 @@ function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray
 end
 
 
-
+using SymDoME
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
-    #
-    # Codigo a desarrollar
-    #
+
+    # Convertir las entradas de entrenamiento a Float64
+    trainingInputs = convert(Array{Float64}, trainingDataset[1])  # Entradas de entrenamiento (matriz)
+    trainingTargets = convert(Array{Float64}trainingDataset[2])  # Etiquetas de entrenamiento (vector de booleanos, no se convierte)
+
+    # Convertir las entradas de test a Float64
+    testInputs = convert(Array{Float64}, testInputs)  # Entradas de test (matriz)
+
+    # Llamar a la función dome para obtener el modelo
+    _, _, _, model = dome(trainingInputs, trainingTargets; maximumNodes=maximumNodes)
+
+    # Evaluar el modelo en el conjunto de test
+    testOutputs = evaluateTree(model, testInputs)
+
+    # Clasificar las salidas usando la función classifyOutputs
+    classifiedOutputs = classifyOutputs(testOutputs, threshold=0.0)
+
+    return classifiedOutputs
 end
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
-    #
-    # Codigo a desarrollar
-    #
+    # Extraer las entradas y salidas del conjunto de entrenamiento
+    trainingInputs = convert(Array{Float64}, trainingDataset[1])  # Entradas de entrenamiento (matriz)
+    trainingTargets = convert(Array{Float64}trainingDataset[2]) # Etiquetas de entrenamiento (vector de booleanos, no se convierte)
+    
+    #Caso clasificacion binaria
+    if size(trainingDataset[2], 2) == 1
+        trainingTargetsVector = vec(trainingTargets)
+        
+        binaryOutputs = trainClassDoME((trainingInputs, traingingTargetsVector), testInputs, maximumNodes)
+        # Convertir las salidas a una matriz de una columna
+        return reshape(binaryOutputs, :, 1)
+    #if size(traingingDataset[2],2 ) > 2
+    else
+        # Clasificación multiclase: aplicar la estrategia "uno contra todos"
+        numClasses = size(trainingTargets, 2) #Numero de clases
+        numTestInstances = size(testInputs, 2) #numero instancias de test copiloto sugeria 1 #columnas son las importante 
+        outputs = zeros(Float64, numTestInstances, numClasses)  # Matriz para almacenar las salidas
+        for classIndez in 1:numClasses
+            binaryTargets = trainingTargets[:, classIndex]
+
+            # Llamar a la función trainClassDoME para clasificación binaria
+            binaryOutputs = trainClassDoME((trainingInputs, binaryTargets), testInputs, maximumNodes)
+
+            # Almacenar las salidas en la columna correspondiente
+            outputs[:, classIndex] = binaryOutputs
+        end
+
+        return outputs
+
+    end
 end
 
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
-    #
-    # Codigo a desarrollar
-    #
+    trainingInputs, trainingTargets = trainingDataset
+    classes = unique(trainingTargets)
+    n_classes = length(classes)
+
+    testOutputs = Array{eltype(trainingTargets),1}(undef, size(testInputs, 1))
+
+    testOutputsDoME = trainClassDoMe((trainingInputs, oneHotEncoding(trainingTargets, classes)), testInputs, maximunNodes)
+    
+    testOutputsBool = classifyOutputs(testOutputsDoME; threshold=0)
+
+    if n_classes <=2
+        testOutputsBool = vec(testOutputsBool)
+        testOutputs[testOutputsBool] .= classes[1]
+        if n_classes == 2
+            testOutputs[.!testOutputsBool] .= classes[2]
+        end
+    else
+        # Si es clasificación multiclase
+        for i in 1:n_classes
+            testOutputs[testOutputsBool[:, i]] .= classes[i]
+        end
+    end
+    
+    return testOutputs
 end
 
 
@@ -672,5 +736,4 @@ end;
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
    
-end
 end
