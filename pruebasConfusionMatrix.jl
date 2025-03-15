@@ -16,7 +16,7 @@ targets = Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]
 
 
 #FUNCIÓN 2
-include("ConfusionMatrix.jl")
+include("firmas.jl")
 # Generamos una matriz de valores reales como outputs
 outputs_real = Float64[0.6 0.2 0.2; 0.5 0.3 0.2; 0.4 0.4 0.2; 
                        0.3 0.5 0.2; 0.2 0.6 0.2; 0.1 0.7 0.2; 
@@ -68,7 +68,7 @@ targets_any = ["A", "B", "C", "A", "B", "C", "A", "B", "C"]
 
         
 #FUNCIÓN 4
-include("ConfusionMatrix.jl")
+include("firmas.jl")
 # Generar outputs y targets como arrays de cualquier tipo (por ejemplo, números)
 outputs = Bool[1 0 1; 0 1 0; 1 0 1; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1]
 targets = Bool[1 0 1; 0 1 0; 1 0 1; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1]
