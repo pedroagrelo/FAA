@@ -239,10 +239,10 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     # Inicializar el vector de pérdidas
     losses = Float32[]
 
-    push!(losses,loss(rna,inputs',outputs'))
+    push!(losses,loss(rna,inputs',targets'))
 
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
-    for epoch in 1:maxEpoch
+    for epoch in 1:maxEpochs
 
         # Actualizar los pesos mediante backpropagation
         Flux.train!(loss, rna, [(input', targets')], opt_state)
@@ -374,19 +374,17 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         currentLoss= loss(rna, trainingInputs', trainingOutputs')
         push!(trainLosses,currentLoss)
   
-        if !isempty(validationDataset)
-            validLoss= loss(rna,validationInputs', validationOutputs')
-            push!(validLosses,validLoss)
+        validLoss= loss(rna,validationInputs', validationOutputs')
+        push!(validLosses,validLoss)
 
-            if validLoss < bestValidLoss
-                bestANN =deepcopy(rna)
-                bestValidLoss = validLoss
-                epochSinceBestANN = 0
-            else
-                epochSinceBestANN +=1
-            end
+        if validLoss < bestValidLoss
+            bestANN =deepcopy(rna)
+            bestValidLoss = validLoss
+            epochSinceBestANN = 0
+        else
+            epochSinceBestANN +=1
         end
-
+    
         if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
             testLoss = loss(rna, testInputs', testOutputs')
             push!(testLosses, testLoss)
