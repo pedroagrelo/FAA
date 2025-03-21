@@ -363,10 +363,6 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         bestValidLoss = validLosses[1]
     end
 
-    if !isempty(testDataset) 
-        push!(testLosses, loss(rna ,  testInputs', testOutputs'))
-    end
-
     if !isempty(testDataset)
         push!(testLosses, loss(rna, testInputs', testOutputs'))
     end
@@ -400,7 +396,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         if !isempty(validationDataset)  
             print("Ciclo $epoch - Train loss: $currentLoss")
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
-            print(!isempty(testLosses) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
+            print(!isempty(testLosses) ? " Test loss : $(testLosses[end])" : "")  #ultimo valor loss de test 
             println()
         end;
 
