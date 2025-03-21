@@ -142,7 +142,7 @@ function classifyOutputs(outputs::AbstractArray{<:Real,1}; threshold::Real=0.5)
 end;
 
 function classifyOutputs(outputs::AbstractArray{<:Real,2}; threshold::Real=0.5)
-    if size(targets, 2) == 1# dimensiones de la matriz solo una columna
+    if size(outputs, 2) == 1# dimensiones de la matriz solo una columna
         return reshape(classifyOutputs(outputs[:], threshold=threshold),:,1 ) #coge todas las filas y la primera columna 
     else 
         (_, indicesMaxEachInstance) = findmax(outputs, dims=2);
@@ -236,11 +236,13 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     opt_state = Flux.setup(Adam(learningRate), rna) 
 
     #Defino la funcion de perdidas
-    loss(x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
+    loss(rna,x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
     
     # Inicializar el vector de pérdidas
     losses = Float32[]
 
+    push!(losses,loss(rna,inputs',outputs'))
+   
     #Invierto ambas matrices fuera
     inputs = inputs'
     targets = targets'
@@ -248,8 +250,11 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
     for epoch in 1:maxEpoch
 
+        # Actualizar los pesos mediante backpropagation
+        Flux.train!(loss, rna, [(input', targets')], opt_state)
+
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
-        currentLoss = loss(inputs, targets)
+        currentLoss = loss(rna,inputs, targets)
         push!(losses, currentLoss)
         # Verificar si el criterio de parada ha sido alcanzado
         if currentLoss <= minLoss
@@ -352,7 +357,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     opt_state = Flux.setup(Adam(learningRate), rna)
 
     # Definir la función de pérdida
-    loss(x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
+    loss(rna,x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
 
     trainLosses=Float32[]
     validLosses=Float32[]
@@ -367,10 +372,21 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     
     # si existe conjunto de validacion, primer loss 
     if !isempty(validationDataset) 
-        push!(validLosses, loss(validationInputs', validationOutputs'))
+        push!(validLosses, loss(rna, validationInputs', validationOutputs'))
+    end
+
+    if !isempty(testDataset) 
+        push!(testLosses, loss(rna ,  testInputs', testOutputs'))
+    end
+
+    if !isempty(testDataset)
+        push!(testLosses, loss(rna, testInputs', testOutputs'))
     end
 
     for epoch in 1:maxEpochs
+
+        #backpropagation 
+        Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
         currentLoss= loss(trainingInputs', trainingOutputs')
         push!(trainLosses,currentLoss)
 
@@ -408,9 +424,6 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
             println("Parada temprana ya que no hay mejoras en $maxEpochsVal épocas.")
             break
         end
-        
-        #backpropagation 
-        Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
 
     end
 
@@ -610,7 +623,7 @@ function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, Abstract
 
     # Convertir las entradas de entrenamiento a Float64
     trainingInputs = convert(Array{Float64}, trainingDataset[1])  # Entradas de entrenamiento (matriz)
-    trainingTargets = convert(Array{Float64}trainingDataset[2])  # Etiquetas de entrenamiento (vector de booleanos, no se convierte)
+    trainingTargets = trainingDataset[2]  # Etiquetas de entrenamiento (vector de booleanos, no se convierte)
 
     # Convertir las entradas de test a Float64
     testInputs = convert(Array{Float64}, testInputs)  # Entradas de test (matriz)
@@ -619,34 +632,61 @@ function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, Abstract
     _, _, _, model = dome(trainingInputs, trainingTargets; maximumNodes=maximumNodes)
 
     # Evaluar el modelo en el conjunto de test
+
     testOutputs = evaluateTree(model, testInputs)
 
-    # Clasificar las salidas usando la función classifyOutputs
-    classifiedOutputs = classifyOutputs(testOutputs, threshold=0.0)
+    return testOutputs
 
-    return classifiedOutputs
+    # Clasificar las salidas usando la función classifyOutputs
+    #classifiedOutputs = classifyOutputs(testOutputs, threshold=0.0)
+    #return classifiedOutputs (ASK!!!!!!!) 
 end
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     # Extraer las entradas y salidas del conjunto de entrenamiento
     trainingInputs = convert(Array{Float64}, trainingDataset[1])  # Entradas de entrenamiento (matriz)
-    trainingTargets = convert(Array{Float64}trainingDataset[2]) # Etiquetas de entrenamiento (vector de booleanos, no se convierte)
+    trainingTargets = trainingDataset[2] # Etiquetas entrenamiento amtriz booleana 
+    
+    numClasses = size(trainingTargets, 2) #numero de clases 
     
     #Caso clasificacion binaria
-    if size(trainingDataset[2], 2) == 1
+    if numClasses == 1
         trainingTargetsVector = vec(trainingTargets)
         
-        binaryOutputs = trainClassDoME((trainingInputs, traingingTargetsVector), testInputs, maximumNodes)
+        binaryOutputs = trainClassDoME((trainingInputs, trainingTargetsVector), testInputs, maximumNodes)
         # Convertir las salidas a una matriz de una columna
         return reshape(binaryOutputs, :, 1)
+    
     #if size(traingingDataset[2],2 ) > 2
-    else
+    elseif numClasses == 2
+        #Regla de uno contra uno
+        numTestInstances = size(testInputs,2)
+        outputs = zeros(Float64, numTestInstances, 2) #matriz que almacena las salidas
+        
+        
+        binaryTargets_1 = vec(trainingTargets[:,1]) #usamos la primera columnna de las etiquetas binarias
+
+        binaryOutputs_1 = trainClassDoME((trainingInputs, binaryTargets_1), testInputs, maximumNodes)
+
+        # Almacenar las salidas en la primera columna
+        outputs[:,1] = binaryOutputs_1
+
+        binaryTargets_2 = trainingTargets[:,2]
+
+        binaryOutputs_2 = trainClassDoME((trainingInputs, binaryTargets_2), testInputs, maximumNodes)
+        
+        # Almacenar salida en la segunda columna
+        outputs[:,2] = binaryOutputs_2
+
+        return outputs
+
+    else 
         # Clasificación multiclase: aplicar la estrategia "uno contra todos"
-        numClasses = size(trainingTargets, 2) #Numero de clases
-        numTestInstances = size(testInputs, 2) #numero instancias de test copiloto sugeria 1 #columnas son las importante 
+        numTestInstances = size(testInputs, 1)  #columnas son las importante #era en filas ao final god damn!!!!!!!
         outputs = zeros(Float64, numTestInstances, numClasses)  # Matriz para almacenar las salidas
-        for classIndez in 1:numClasses
-            binaryTargets = trainingTargets[:, classIndex]
+        for classIndex in 1:numClasses
+            # etiquetas binarias de la clase actual
+            binaryTargets = vec(trainingTargets[:, classIndex])
 
             # Llamar a la función trainClassDoME para clasificación binaria
             binaryOutputs = trainClassDoME((trainingInputs, binaryTargets), testInputs, maximumNodes)
@@ -663,12 +703,16 @@ end
 
 function trainClassDoME(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, testInputs::AbstractArray{<:Real,2}, maximumNodes::Int)
     trainingInputs, trainingTargets = trainingDataset
+
+    trainingInputs = convert(Array{Float64}, trainingInputs)
+    testInputs = convert(Array{Float64}, testInputs)
+
     classes = unique(trainingTargets)
     n_classes = length(classes)
 
     testOutputs = Array{eltype(trainingTargets),1}(undef, size(testInputs, 1))
 
-    testOutputsDoME = trainClassDoMe((trainingInputs, oneHotEncoding(trainingTargets, classes)), testInputs, maximunNodes)
+    testOutputsDoME = trainClassDoME((trainingInputs, oneHotEncoding(trainingTargets, classes)), testInputs, maximumNodes)
     
     testOutputsBool = classifyOutputs(testOutputsDoME; threshold=0)
 
