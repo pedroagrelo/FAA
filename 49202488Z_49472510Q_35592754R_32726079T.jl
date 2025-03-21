@@ -218,14 +218,12 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     inputs, targets = dataset # separo la tupla de dos matrices que viene como parametro 
 
     # Verificar que las entradas y las salidas no sean Nothing
-    if inputs === nothing || targets === nothing
+    if inputs == nothing || targets == nothing
        throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
     end
 
     # Asegurarse de que las entradas estén en Float32
-    inputs = convert(Array{Float32}, inputs) 
-
-    #targets = convert(Array{Float32}, targets) #para comparar dos float 
+    inputs = convert(Array{Float32}, inputs)
 
     numInputs = size(inputs, 2)   # Columnas de `inputs` = Número de características 
     numOutputs = size(targets, 2) # Columnas de `targets` = Número de clases 
@@ -236,34 +234,27 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     opt_state = Flux.setup(Adam(learningRate), rna) 
 
     #Defino la funcion de perdidas
-    loss(rna,x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
+    loss(rna, x,y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x),y) : Losses.crossentropy(rna(x),y); #rna al principio no puede estar 
     
     # Inicializar el vector de pérdidas
     losses = Float32[]
 
     push!(losses,loss(rna,inputs',outputs'))
-   
-    #Invierto ambas matrices fuera
-    inputs = inputs'
-    targets = targets'
 
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
     for epoch in 1:maxEpoch
 
         # Actualizar los pesos mediante backpropagation
         Flux.train!(loss, rna, [(input', targets')], opt_state)
-
+        
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
-        currentLoss = loss(rna,inputs, targets)
+        currentLoss = loss(rna, inputs', targets')
         push!(losses, currentLoss)
         # Verificar si el criterio de parada ha sido alcanzado
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
             break
         end
-
-        # Actualizar los pesos mediante backpropagation
-        Flux.train!(loss, rna, [(inputs, targets)], opt_state)
         
         # Mostrar progreso cada ciertos ciclos
         if epoch % 100 == 0
@@ -283,7 +274,7 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     inputs, targets = dataset
 
     # Verificar que las entradas y las salidas no sean Nothing
-    if inputs === nothing || targets === nothing
+    if inputs == nothing || targets == nothing
         throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
     end
 
@@ -343,9 +334,6 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     trainingInputs =Float32.(trainingInputs)
     validationInputs= Float32.(validationInputs)
     testInputs=Float32.(testInputs)
-    #trainingOutputs =Float32.(trainingOutputs)
-    #validationOutputs= Float32.(ValidationOutputs)
-    #testOutputs=Float32.(testOutputs)
 
     numInputs = size(trainingInputs,2)
     numOutputs = size(trainingOutputs,2)
@@ -357,22 +345,22 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     opt_state = Flux.setup(Adam(learningRate), rna)
 
     # Definir la función de pérdida
-    loss(rna,x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
+    loss(rna, x, y) = (size(y,1) == 1) ? Losses.binarycrossentropy(rna(x), y) : Losses.crossentropy(rna(x), y)
 
     trainLosses=Float32[]
     validLosses=Float32[]
     testLosses=Float32[]
 
-    bestValidLoss = Inf 
     epochSinceBestANN=0
 
 
     #Loss inicial epoch = 0
-    push!(trainLosses,loss(trainingInputs',trainingOutputs'))
+    push!(trainLosses,loss(rna, trainingInputs',trainingOutputs'))
     
     # si existe conjunto de validacion, primer loss 
     if !isempty(validationDataset) 
-        push!(validLosses, loss(rna, validationInputs', validationOutputs'))
+        push!(validLosses, loss(rna ,validationInputs', validationOutputs'))
+        bestValidLoss = validLosses[1]
     end
 
     if !isempty(testDataset) 
@@ -382,37 +370,39 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     if !isempty(testDataset)
         push!(testLosses, loss(rna, testInputs', testOutputs'))
     end
-
+    
     for epoch in 1:maxEpochs
-
         #backpropagation 
         Flux.train!(loss, rna, [(trainingInputs', trainingOutputs')], opt_state)
-        currentLoss= loss(trainingInputs', trainingOutputs')
-        push!(trainLosses,currentLoss)
 
+        currentLoss= loss(rna, trainingInputs', trainingOutputs')
+        push!(trainLosses,currentLoss)
+  
         if !isempty(validationDataset)
-            validLoss= loss(validationInputs', validationOutputs')
+            validLoss= loss(rna,validationInputs', validationOutputs')
             push!(validLosses,validLoss)
 
             if validLoss < bestValidLoss
                 bestANN =deepcopy(rna)
-                epcohSinceBestANN = 0
+                bestValidLoss = validLoss
+                epochSinceBestANN = 0
             else
-                epcohSinceBestANN +=1
+                epochSinceBestANN +=1
             end
         end
 
         if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
-            push!(testLosses, loss(testInputs', testOutputs'))
+            testLoss = loss(rna, testInputs', testOutputs')
+            push!(testLosses, testLoss)
         end 
 
         #si se ha pasado un conjunto validacion como parametro
         if !isempty(validationDataset)  
             print("Ciclo $epoch - Train loss: $currentLoss")
             print(validLoss !== nothing ? " - Validation Loss: $validLoss" : "")
-            print(!isempty(testInputs) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
+            print(!isempty(testLosses) ? " Test loss : $testLosses[end]" : "")  #ultimo valor loss de test 
             println()
-        end
+        end;
 
         if currentLoss <= minLoss
             println("Criterio de parada alcanzado. Pérdida mínima alcanzada.")
@@ -420,11 +410,11 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         end
 
         #Nuevo criterio parada, segun error de validacion 
-        if !isempty(validationInputs) && epochSinceBestANN >= maxEpochsVal
+        if !isempty(validationInputs) && epochSinceBestANN >= maxEpochsVal 
             println("Parada temprana ya que no hay mejoras en $maxEpochsVal épocas.")
             break
         end
-
+        
     end
 
      # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
