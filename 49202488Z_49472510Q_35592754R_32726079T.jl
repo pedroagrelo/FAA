@@ -241,11 +241,12 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
 
     push!(losses,loss(rna,inputs',targets'))
 
+
     # Criterio de parada: entrenamiento hasta maxEpochs o minLoss alcanzado
     for epoch in 1:maxEpochs
 
         # Actualizar los pesos mediante backpropagation
-        Flux.train!(loss, rna, [(input', targets')], opt_state)
+        Flux.train!(loss, rna, [(inputs', targets')], opt_state)
         
         # Calcular el valor de la pérdida en el conjunto de entrenamiento
         currentLoss = loss(rna, inputs', targets')
@@ -408,8 +409,13 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
             println("Parada temprana ya que no hay mejoras en $maxEpochsVal épocas.")
             break
         end
-        
+
     end
+
+    println("Train losses: ", trainLosses)
+    println("Validation losses: ", validLosses)
+    println("Test losses: ", testLosses)
+
 
      # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
     return (!isempty(validationInputs) ? bestANN : rna), trainLosses, validLosses, testLosses

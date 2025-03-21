@@ -1,5 +1,3 @@
-
-
 # Archivo de pruebas para realizar autoevaluación de algunas funciones de los ejercicios
 
 # Importamos el archivo con las soluciones a los ejercicios
