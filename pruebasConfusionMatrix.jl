@@ -85,3 +85,73 @@ targets = Bool[1 0 1; 0 1 0; 1 0 1; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1]
 
 
 
+include("firmas.jl")
+# Prueba 1: Clasificación binaria con valores booleanos
+println("Prueba 1: Clasificación binaria con valores booleanos")
+outputs = sin.(1:8) .>= 0
+targets = [falses(4); trues(4)]
+(acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets)
+println("Accuracy: ", acc)
+println("Error Rate: ", errorRate)
+println("Recall: ", recall)
+println("Specificity: ", specificity)
+println("Precision: ", precision)
+println("NPV: ", NPV)
+println("F1: ", F1)
+println("Matriz de Confusión:")
+println(confMatrix)
+@assert(isapprox(acc, 0.375) && isapprox(errorRate, 1-0.375) && isapprox(recall, 0.5) && isapprox(specificity, 0.25) && isapprox(precision, 0.4) && isapprox(NPV, 1/3.) && isapprox(F1, 4/9.) && confMatrix==[1 3; 2 2])
+println("Prueba 1 pasada correctamente.\n")
+
+# Prueba 2: Clasificación binaria con valores reales y umbral
+println("Prueba 2: Clasificación binaria con valores reales y umbral")
+outputs = sin.(1:8)
+targets = [falses(4); trues(4)]
+(acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets; threshold=0.9)
+println("Accuracy: ", acc)
+println("Error Rate: ", errorRate)
+println("Recall: ", recall)
+println("Specificity: ", specificity)
+println("Precision: ", precision)
+println("NPV: ", NPV)
+println("F1: ", F1)
+println("Matriz de Confusión:")
+println(confMatrix)
+@assert(isapprox(acc, 0.5) && isapprox(errorRate, 0.5) && isapprox(recall, 0.25) && isapprox(specificity, 0.75) && isapprox(precision, 0.5) && isapprox(NPV, 0.5) && isapprox(F1, 1/3.) && confMatrix==[3 1; 3 1])
+println("Prueba 2 pasada correctamente.\n")
+
+# Prueba 3: Clasificación multiclase con valores booleanos y weighted=true
+println("Prueba 3: Clasificación multiclase con valores booleanos y weighted=true")
+outputs = Bool[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1]
+targets = Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]
+(acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets; weighted=true)
+println("Accuracy: ", acc)
+println("Error Rate: ", errorRate)
+println("Recall: ", recall)
+println("Specificity: ", specificity)
+println("Precision: ", precision)
+println("NPV: ", NPV)
+println("F1: ", F1)
+println("Matriz de Confusión:")
+println(confMatrix)
+@assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[1 1 1; 1 1 1; 1 1 1])
+println("Prueba 3 pasada correctamente.\n")
+
+# Prueba 4: Clasificación multiclase con valores categóricos
+println("Prueba 4: Clasificación multiclase con valores categóricos")
+targets = repeat([1, 2, 3], 50)
+outputs = repeat(unique(targets), 50)
+(acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets)
+println("Accuracy: ", acc)
+println("Error Rate: ", errorRate)
+println("Recall: ", recall)
+println("Specificity: ", specificity)
+println("Precision: ", precision)
+println("NPV: ", NPV)
+println("F1: ", F1)
+println("Matriz de Confusión:")
+println(confMatrix)
+@assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[17 17 16; 17 16 17; 16 17 17])
+println("Prueba 4 pasada correctamente.\n")
+
+println("¡Todas las pruebas se han ejecutado correctamente!")
