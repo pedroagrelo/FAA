@@ -274,10 +274,10 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
 
     inputs, targets = dataset
 
-    # # Verificar que las entradas y las salidas no sean Nothing
-    # if inputs == nothing || targets == nothing
-    #     throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
-    # end
+    # Verificar que las entradas y las salidas no sean Nothing
+    if inputs == nothing || targets == nothing
+        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+    end
 
     # Convertir las salidas (en caso de clasificación binaria) a una matriz de una columna
     targets = reshape(targets, :, 1)
@@ -359,13 +359,15 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
     push!(trainLosses,loss(rna, trainingInputs',trainingOutputs'))
     
     # si existe conjunto de validacion, primer loss 
-    if !isempty(validationDataset) 
-        push!(validLosses, loss(rna ,validationInputs', validationOutputs'))
+    if !isempty(validationDataset)
+        validLoss = loss(rna, validationInputs', validationOutputs') 
+        push!(validLosses, validLoss)
         bestValidLoss = validLosses[1]
     end
 
     if !isempty(testDataset)
-        push!(testLosses, loss(rna, testInputs', testOutputs'))
+        testLoss = loss(rna, testInputs', testOutputs')
+        push!(testLosses, testLoss)
     end
     
     for epoch in 1:maxEpochs
@@ -375,17 +377,20 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
         currentLoss= loss(rna, trainingInputs', trainingOutputs')
         push!(trainLosses,currentLoss)
   
-        validLoss= loss(rna,validationInputs', validationOutputs')
-        push!(validLosses,validLoss)
-
-        if validLoss < bestValidLoss
-            bestANN =deepcopy(rna)
-            bestValidLoss = validLoss
-            epochSinceBestANN = 0
-        else
-            epochSinceBestANN +=1
+        if !isempty(validationDataset)
+            validLoss= loss(rna,validationInputs', validationOutputs')
+            push!(validLosses,validLoss)
+        
+            if validLoss < bestValidLoss
+                bestANN =deepcopy(rna)
+                bestValidLoss = validLoss
+                epochSinceBestANN = 0
+            else
+                epochSinceBestANN +=1
+            end
+       
         end
-    
+
         if !isempty(testDataset) #para no afectar al entreno, pero ver como evoluciona con cada ciclo
             testLoss = loss(rna, testInputs', testOutputs')
             push!(testLosses, testLoss)
@@ -412,9 +417,9 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
 
     end
 
-    println("Train losses: ", trainLosses)
-    println("Validation losses: ", validLosses)
-    println("Test losses: ", testLosses)
+    # println("Train losses: ", trainLosses)
+    # println("Validation losses: ", validLosses)
+    # println("Test losses: ", testLosses)
 
 
      # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
