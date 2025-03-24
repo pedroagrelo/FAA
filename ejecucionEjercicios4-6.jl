@@ -48,6 +48,7 @@ targets = dataset[:,5];
 
 
 outputs2Classes = trainClassDoME((inputs[1:100,:], targets[1:100].=="Iris-setosa"), inputs[[1],:], 20);
+println("Valor predicho: ", outputs2Classes[1])
 @assert(isapprox(outputs2Classes[1], 1.0751594373353253));
 
 outputs3Classes = trainClassDoME((inputs[1:149,:], oneHotEncoding(targets[1:149])), inputs[[150],:], 20);
