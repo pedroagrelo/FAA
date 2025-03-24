@@ -732,28 +732,219 @@ end
 
 
 function crossvalidation(N::Int64, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
+    @assert k > 0 "El número de subconjuntos debe ser mayor que 0"
+    @assert N >= k "N debe ser mayor o igual que k"
+
+    # 1. Crear un vector con k elementos ordenados de 1 hasta k
+    base_vector = collect(1:k)
+
+    # 2. Crear un vector nuevo repitiendo los valores hasta alcanzar una longitud >= N
+    repeated_vector = repeat(base_vector, ceil(Int, N / k))
+
+    # 3. Tomar los N primeros valores
+    cv_vector = repeated_vector[1:N]
+
+    # 4. Desordenar el vector usando shuffle!
+    shuffle!(cv_vector)
+
+    return cv_vector
 end;
 
 function crossvalidation(targets::AbstractArray{Bool,1}, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
+    @assert k > 0 "El número de subconjuntos debe ser mayor que 0"
+    N = length(targets)
+
+    # Crear un vector de índices vacío
+    indices = zeros(Int, N)
+
+    # Partición para instancias positivas
+    indices[targets] .= crossvalidation(sum(targets), k) 
+
+    # Partición para instancias negativas
+    indices[.!targets] .= crossvalidation(sum(.!targets), k)
+
+    return indices
 end;
 
 function crossvalidation(targets::AbstractArray{Bool,2}, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
+    @assert k > 0 "El número de subconjuntos debe ser mayor que 0"
+    N = size(targets, 1)  # Número de filas (patrones)
+    num_classes = size(targets, 2)  # Número de clases (columnas)
+
+    # Crear vector de índices vacío
+    indices = zeros(Int, N)
+
+    # Bucle sobre las clases
+    for class in 1:num_classes
+        # Estratificación para cada clase
+        indices[targets[:, class]] .= crossvalidation(sum(targets[:, class]), k)
+    end
+
+    return indices
 end;
 
-function crossvalidation(targets::AbstractArray{<:Any,1}, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
-end;
+function ANNCrossValidation(
+    topology::AbstractArray{<:Int,1}, 
+    dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
+    crossValidationIndices::Array{Int64,1};
+    numExecutions::Int=50,
+    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
+    maxEpochs::Int=1000, 
+    minLoss::Real=0.0, 
+    learningRate::Real=0.01, 
+    validationRatio::Real=0, 
+    maxEpochsVal::Int=20
+)
+    ###########################################################################
+    # 1. Extraer entradas (inputs) y salidas (targets) del dataset
+    ###########################################################################
+    inputs, targets = dataset
+    # Aseguramos que las entradas sean Float32 para Flux
+    inputs = Float32.(inputs)
+
+    ###########################################################################
+    # 2. Obtener clases únicas y convertir las salidas a formato one-hot
+    ###########################################################################
+    classes = unique(targets)                 # p.ej. ["Iris-setosa","Iris-versicolor","Iris-virginica"]
+    one_hot_targets = oneHotEncoding(targets, classes)  # BitMatrix
+    one_hot_targets = Float32.(one_hot_targets)         # Convertimos a Float32
+
+    ###########################################################################
+    # 3. Preparar variables de validación cruzada (folds)
+    ###########################################################################
+    N = size(inputs, 1)
+    num_classes = length(classes)
+    num_folds   = maximum(crossValidationIndices)
+
+    # Vectores para almacenar métricas en cada fold
+    precision   = zeros(num_folds)
+    error_rate  = zeros(num_folds)
+    sensitivity = zeros(num_folds)
+    specificity = zeros(num_folds)
+    vpp         = zeros(num_folds)
+    vpn         = zeros(num_folds)
+    f1          = zeros(num_folds)
+
+    # Matriz de confusión global
+    global_confusion_matrix = zeros(num_classes, num_classes)
+
+    ###########################################################################
+    # 4. Bucle principal por cada fold
+    ###########################################################################
+    for fold in 1:num_folds
+        # Separar índices de entrenamiento y test
+        test_indices  = findall(crossValidationIndices .== fold)
+        train_indices = findall(crossValidationIndices .!= fold)
+
+        # Crear subconjunto de entrenamiento
+        train_inputs_  = inputs[train_indices, :]
+        train_targets_ = one_hot_targets[train_indices, :]
+
+        # Crear subconjunto de test
+        test_inputs_   = inputs[test_indices, :]
+        test_targets_  = one_hot_targets[test_indices, :]
+
+        # Matrices locales para almacenar resultados en cada ejecución
+        local_confusion_matrices = zeros(num_classes, num_classes, numExecutions)
+        local_metrics = zeros(7, numExecutions)
+
+        #######################################################################
+        # 4.1. Bucle interno: repetir entrenamiento `numExecutions` veces
+        #######################################################################
+        for execution in 1:numExecutions
+            # Si queremos validación interna (parada temprana)
+            if validationRatio > 0
+                adjustedRatio = validationRatio / (1 - length(test_indices) / N)
+                # holdOut para dividir train en (train, val)
+                split_train, split_val = holdOut(size(train_inputs_, 1), adjustedRatio)
+
+                val_inputs_  = train_inputs_[split_val, :]
+                val_targets_ = train_targets_[split_val, :]
+
+                train_inputs_fold  = train_inputs_[split_train, :]
+                train_targets_fold = train_targets_[split_train, :]
+            else
+                # Sin validación
+                val_inputs_  = zeros(Float32, 0, size(train_inputs_, 2))
+                val_targets_ = zeros(Float32, 0, size(train_targets_, 2))
+
+                train_inputs_fold  = train_inputs_
+                train_targets_fold = train_targets_
+            end
+
+            # Definimos el tuple de validación
+            validationDataset = (val_inputs_, val_targets_)
+
+            ###################################################################
+            # 4.2. Entrenar la RNA con trainClassANN
+            ###################################################################
+            # IMPORTANTE: trainClassANN debe aceptar (Matrix{Float32}, Matrix{Float32})
+            # para que no haya error de tipos.
+            model, _, _, _ = trainClassANN(
+                topology,
+                (train_inputs_fold, train_targets_fold);
+                validationDataset = validationDataset,
+                transferFunctions = transferFunctions,
+                maxEpochs = maxEpochs,
+                minLoss = minLoss,
+                learningRate = learningRate,
+                maxEpochsVal = maxEpochsVal
+            )
+
+            ###################################################################
+            # 4.3. Generar predicciones en test
+            ###################################################################
+            # Asumimos `model` es un Flux.Chain:
+            raw_preds = model(test_inputs_' )   # (num_classes, batch)
+            # Extraer la clase de mayor prob:
+            test_predictions = argmax(raw_preds, dims=1)  # Array  (1, batch)  con CartesianIndex
+            test_predictions = [ci[2] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
+
+            # Convertir test_targets_ (one-hot) a Vector{Int}
+            cart_tgts = argmax(test_targets_, dims=2)  # (batch,1)
+            test_targets_int = [ci[2] for ci in cart_tgts]  # Vector{Int}
+
+            ###################################################################
+            # 4.4. confusionMatrix (Vector{Int}, Vector{Int})
+            ###################################################################
+            # Debes tener una función confusionMatrix(preds::Vector{Int}, targs::Vector{Int})
+            # que devuelva (matrix, metrics). Por ejemplo, matrix NxN y metrics un vector[7].
+            conf_mat, metrics_ = confusionMatrix(test_predictions, test_targets_int)
+
+            local_confusion_matrices[:, :, execution] = conf_mat
+            local_metrics[:, execution] = metrics_
+        end
+
+        #######################################################################
+        # 4.5. Promediar resultados en este fold
+        #######################################################################
+        fold_conf = mean(local_confusion_matrices, dims=3)[:, :, 1]
+        global_confusion_matrix .+= fold_conf
+
+        precision[fold]   = mean(local_metrics[1, :])
+        error_rate[fold]  = mean(local_metrics[2, :])
+        sensitivity[fold] = mean(local_metrics[3, :])
+        specificity[fold] = mean(local_metrics[4, :])
+        vpp[fold]         = mean(local_metrics[5, :])
+        vpn[fold]         = mean(local_metrics[6, :])
+        f1[fold]          = mean(local_metrics[7, :])
+    end
+
+    ###########################################################################
+    # 5. Devolver métricas y matriz de confusión global
+    ###########################################################################
+    return (
+        (mean(precision),    std(precision)),
+        (mean(error_rate),   std(error_rate)),
+        (mean(sensitivity),  std(sensitivity)),
+        (mean(specificity),  std(specificity)),
+        (mean(vpp),          std(vpp)),
+        (mean(vpn),          std(vpn)),
+        (mean(f1),           std(f1)),
+        global_confusion_matrix
+    )
+end
+
 
 function ANNCrossValidation(topology::AbstractArray{<:Int,1},
     dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
