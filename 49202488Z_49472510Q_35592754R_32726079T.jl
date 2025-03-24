@@ -356,18 +356,16 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
 
 
     #Loss inicial epoch = 0
-    push!(trainLosses,loss(rna, trainingInputs',trainingOutputs'))
+    push!(trainLosses,loss(rna,trainingInputs',trainingOutputs'))
     
     # si existe conjunto de validacion, primer loss 
-    if !isempty(validationDataset)
-        validLoss = loss(rna, validationInputs', validationOutputs') 
-        push!(validLosses, validLoss)
+    if !isempty(validationDataset) 
+        push!(validLosses, loss(rna, validationInputs', validationOutputs'))
         bestValidLoss = validLosses[1]
     end
 
     if !isempty(testDataset)
-        testLoss = loss(rna, testInputs', testOutputs')
-        push!(testLosses, testLoss)
+        push!(testLosses, loss(rna, testInputs', testOutputs'))
     end
     
     for epoch in 1:maxEpochs
@@ -417,9 +415,9 @@ function trainClassANN(topology::AbstractArray{<:Int,1},
 
     end
 
-    # println("Train losses: ", trainLosses)
-    # println("Validation losses: ", validLosses)
-    # println("Test losses: ", testLosses)
+    println("Train losses: ", trainLosses)
+    println("Validation losses: ", validLosses)
+    println("Test losses: ", testLosses)
 
 
      # Si hubo validación, devolvemos la mejor RNA, si no devolvemos la última entrenada
