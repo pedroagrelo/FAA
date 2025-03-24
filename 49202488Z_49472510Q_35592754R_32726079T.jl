@@ -217,10 +217,10 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
     
     inputs, targets = dataset # separo la tupla de dos matrices que viene como parametro 
 
-    # Verificar que las entradas y las salidas no sean Nothing
-    if inputs == nothing || targets == nothing
-       throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
-    end
+    # # Verificar que las entradas y las salidas no sean Nothing
+    # if inputs == nothing || targets == nothing
+    #    throw(ArgumentError("Las entradas o las salidas no pueden estar vacías."))
+    # end
 
     # Asegurarse de que las entradas estén en Float32
     inputs = convert(Array{Float32}, inputs)
@@ -274,10 +274,10 @@ function trainClassANN(topology::AbstractArray{<:Int,1}, dataset::Tuple{Abstract
 
     inputs, targets = dataset
 
-    # Verificar que las entradas y las salidas no sean Nothing
-    if inputs == nothing || targets == nothing
-        throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
-    end
+    # # Verificar que las entradas y las salidas no sean Nothing
+    # if inputs == nothing || targets == nothing
+    #     throw(ArgumentError("Las entradas o las salidas no pueden ser Nothing."))
+    # end
 
     # Convertir las salidas (en caso de clasificación binaria) a una matriz de una columna
     targets = reshape(targets, :, 1)
