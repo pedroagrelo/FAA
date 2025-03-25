@@ -529,7 +529,7 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
     npvs = zeros(n_classes)
     F1s = zeros(n_classes)
 
-    # Llamada a la función de la práctica anterior para cada clase
+    # Cálculo de métricas para cada clase
     for i in 1:n_classes
         tp = sum(outputs[:,i] .& targets[:,i])         # Verdaderos positivos
         tn = sum((.!outputs[:,i]) .& (.!targets[:,i])) # Verdaderos negativos
@@ -542,7 +542,7 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         npv = tn / (tn + fn)
         F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
         
-        # Asignación de métricas a las variables
+        # Asignación de métricas
         sensitivities[i] = sensitivity
         specificities[i] = specificity
         precisions[i] = precision
@@ -550,7 +550,7 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         F1s[i] = F1
     end
 
-    # Calcular la matriz de confusión
+    # Calcular la matriz de confusión (corrigiendo filas y columnas)
     confMatrix = [sum(outputs[:, j] .& targets[:, i]) for i in 1:n_classes, j in 1:n_classes]
 
     # Calcular métricas ponderadas o macro
@@ -564,9 +564,7 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         weighted_precision = sum(precisions .* class_counts) / total
         weighted_npvs = sum(npvs .* class_counts) / total
         weighted_F1 = sum(F1s .* class_counts) / total
-        accuracy = weighted_sensitivity  # Usamos sensibilidad ponderada como precisión
     else
-        accuracy = mean(sensitivities)
         weighted_sensitivity = mean(sensitivities)
         weighted_specificity = mean(specificities)
         weighted_precision = mean(precisions)
@@ -574,17 +572,22 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         weighted_F1 = mean(F1s)
     end
 
-    errorRate = 1 - accuracy
+    # Usar la función accuracy en lugar de cálculo manual
+    accuracy_value = accuracy(outputs, targets)
+    errorRate = 1 - accuracy_value
 
-    return accuracy, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
+    return accuracy_value, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
 end
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    # Convertir las salidas reales en booleanos usando el umbral
-    outputs_bool = outputs .>= threshold
+    # Convertir las salidas reales en valores One-Hot usando el umbral
+    # Aplicar oneHotEncoding a cada columna de outputs
+    outputs_bool = hcat([oneHotEncoding(outputs[:,j], threshold) for j in 1:size(outputs, 2)]...)
+    
     # Llamar a la función principal de confusionMatrix para matrices booleanas
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
+
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
     # Verificar que todas las etiquetas estén en el vector de clases
@@ -600,9 +603,10 @@ end
 
 # Función para clasificación multiclase con clases calculadas automáticamente
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-    # Calcular las clases únicas a partir de las salidas y objetivos
+    # Calcular las clases únicas
     classes = unique(vcat(targets, outputs))
-    # Llamar a la función anterior que requiere las clases como argumento
+    
+    # Llamar a la función principal
     return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end
 
