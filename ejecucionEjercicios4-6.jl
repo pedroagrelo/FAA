@@ -28,7 +28,7 @@ dataset = readdlm("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje 
 inputs = convert(Array{Float32,2}, dataset[:,1:4]);
 targets = dataset[:,5];
 
-#=
+
 # ----------------------------------------------------------------------------------------------
 # ------------------------------------- Ejercicio 4 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ outputs3Classes = trainClassDoME((inputs[1:149,:], targets[1:149]), inputs[[150]
 @assert(outputs3Classes[1]=="Iris-virginica");
 
 
-=#
+
 
 
 
@@ -96,6 +96,7 @@ seed!(1); ((testAccuracy_mean, testAccuracy_std), (testErrorRate_mean, testError
 @assert(isapprox(testNPV_mean,         0.9545454545454545) && isapprox(testNPV_std,         0.04719813390194002))
 @assert(isapprox(testF1_mean,          0.8397306397306397) && isapprox(testF1_std,          0.198289533779536))
 @assert(all(isapprox(testConfusionMatrix, [50.0 0.0 0.0; 0.0 37.0 13.0; 0.0 6.0 44.0])))
+
 
 
 

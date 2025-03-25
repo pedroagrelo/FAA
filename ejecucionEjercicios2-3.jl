@@ -23,7 +23,7 @@ Pkg.status("Flux")
 
 # Cargamos el dataset
 using DelimitedFiles: readdlm
-dataset = readdlm("iris.data",',');
+dataset = readdlm("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/RepoFAA/FAA/iris.data",',');
 # Preparamos las entradas
 inputs = convert(Array{Float32,2}, dataset[:,1:4]);
 
