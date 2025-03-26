@@ -122,7 +122,7 @@ println("Prueba 2 pasada correctamente.\n")
 
 # Prueba 3: Clasificación multiclase con valores booleanos y weighted=true
 println("Prueba 3: Clasificación multiclase con valores booleanos y weighted=true")
-outputs = Bool[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1]
+outputs = Float64[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1].+ 1
 targets = Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]
 (acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets; weighted=true)
 println("Accuracy: ", acc)
@@ -155,3 +155,47 @@ println(confMatrix)
 println("Prueba 4 pasada correctamente.\n")
 
 println("¡Todas las pruebas se han ejecutado correctamente!")
+
+# Función de prueba
+function test_confusionMatrix()
+        # Crear datos de prueba
+        outputs = Float64[0.6 0.2 0.7; 0.4 0.3 0.8; 0.5 0.5 0.9; 0.1 0.7 0.6; 0.6 0.5 0.4]  # Salidas continuas
+        targets = Bool[1 0 1; 0 1 1; 1 0 1; 0 1 1; 1 1 0]  # Objetivos reales binarios
+    
+        # Llamar a la función de clasificación binaria
+        threshold = 0.5  # Umbral de conversión
+        (acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets, threshold=threshold, weighted=true)
+        println("outputs_bool: ", outputs_bool) 
+        # Imprimir los resultados
+        println("Accuracy: ", acc)
+        println("Error Rate: ", errorRate)
+        println("Recall: ", recall)
+        println("Specificity: ", specificity)
+        println("Precision: ", precision)
+        println("NPV: ", NPV)
+        println("F1: ", F1)
+        println("Confusion Matrix: ", confMatrix)
+    
+        # Validar los resultados esperados con un assert
+        @assert isapprox(acc, 0.6)
+        @assert isapprox(errorRate, 0.4)
+        @assert isapprox(recall, 0.6)
+        @assert isapprox(specificity, 0.8)
+        @assert isapprox(precision, 0.75)
+        @assert isapprox(NPV, 0.75)
+        @assert isapprox(F1, 0.6667)
+        @assert confMatrix == [2 1 0; 1 3 1; 1 1 3]  # Aquí asumiendo que se genera esta matriz
+    
+        println("Test passed!")
+    end
+    
+    # Ejecutar la prueba
+    test_confusionMatrix()
+    
+    # Ejemplo de prueba
+outputs = Float64[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1] .+ 1
+targets = Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]
+threshold = 0.5
+
+# Llamar la función para ver cómo se genera outputs_bool
+confusionMatrix(outputs, targets; threshold=threshold)

@@ -588,7 +588,9 @@ end
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
     # Convertir las salidas reales en valores booleanos usando classifyOutputs
-    outputs_bool = classifyOutputs(outputs .>= threshold)
+    outputs_bool = classifyOutputs(outputs, threshold=threshold)
+    println("outputs_bool: ", outputs_bool)  # Verifica los valores booleanos generados
+
 
     # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
