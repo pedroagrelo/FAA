@@ -544,9 +544,10 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         
         sensitivity = tp / (tp + fn)
         specificity = tn / (tn + fp)
-        precision = tp / (tp + fp)
+        precision = tp / (tp + fp)        
         npv = tn / (tn + fn)
-        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+        F1 = 2 * (precision * sensitivity) / (precision + sensitivity) 
+        
         
         # Asignación de métricas
         sensitivities[i] = sensitivity
@@ -587,14 +588,21 @@ end
 
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    # Convertir las salidas reales en valores booleanos usando classifyOutputs
-    outputs_bool = classifyOutputs(outputs, threshold=threshold)
-    println("outputs_bool: ", outputs_bool)  # Verifica los valores booleanos generados
+    # Comprobar si outputs tiene solo una columna (clasificación binaria o multiclase con una sola clase activa)
+    if size(outputs, 2) == 1
+        # Si es así, aplicamos classifyOutputs a la columna (usando threshold)
+        outputs_bool = classifyOutputs(outputs[:, 1], threshold=threshold)  # Convertir la columna de salidas reales a valores booleanos
+    else
+        # Si no, seguimos el flujo normal para matrices multiclase
+        outputs_bool = classifyOutputs(outputs, threshold=threshold)  # Convertir las salidas reales a booleanos
+    end
 
+    println("outputs_bool: ", outputs_bool)  # Verifica los valores booleanos generados
 
     # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
+
 
 
 
