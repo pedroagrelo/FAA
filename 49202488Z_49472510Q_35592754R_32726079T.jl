@@ -520,6 +520,12 @@ end
 
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
+    if size(outputs, 1) != size(targets, 1)
+        min_rows = min(size(outputs, 1), size(targets, 1))
+        outputs = outputs[1:min_rows, :]
+        targets = targets[1:min_rows, :]
+    end
+    
     n_classes = size(outputs, 2)
 
     # Inicialización de las métricas para cada clase
@@ -579,33 +585,36 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
     return accuracy_value, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
 end
 
+
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    # Convertir las salidas reales en valores One-Hot usando el umbral
-    # Aplicar oneHotEncoding a cada columna de outputs
-    outputs_bool = hcat([oneHotEncoding(outputs[:,j], threshold) for j in 1:size(outputs, 2)]...)
-    
-    # Llamar a la función principal de confusionMatrix para matrices booleanas
+    # Convertir las salidas reales en valores booleanos usando classifyOutputs
+    outputs_bool = classifyOutputs(outputs .>= threshold)
+
+    # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
 
 
+
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-    # Verificar que todas las etiquetas estén en el vector de clases
-    @assert all([in(label, classes) for label in vcat(targets, outputs)])
-    
-    # Convertir las salidas y objetivos a one-hot encoding
+    # Verificar que todas las etiquetas están en el conjunto de clases
+    @assert all(in.(vcat(targets, outputs), Ref(classes)))
+
+
+    # Convertir outputs y targets a matrices One-Hot
     outputs_encoded = oneHotEncoding(outputs, classes)
     targets_encoded = oneHotEncoding(targets, classes)
-    
-    # Llamar a la función principal de confusionMatrix para matrices booleanas
+
+    # Llamar a la función principal de confusionMatrix con las matrices booleanas
     return confusionMatrix(outputs_encoded, targets_encoded; weighted=weighted)
 end
+
 
 # Función para clasificación multiclase con clases calculadas automáticamente
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
     # Calcular las clases únicas
     classes = unique(vcat(targets, outputs))
-    
+
     # Llamar a la función principal
     return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end
