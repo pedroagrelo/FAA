@@ -298,18 +298,27 @@ end
 
 
 include("49202488Z_49472510Q_35592754R_32726079T.jl")
-function test_confusionMatrix()
-        println("Prueba con matriz de una sola columna")
-        
-        outputs = Bool[1; 0; 1; 1; 0]  # Matriz de una columna (se convierte a vector)
-        targets = Bool[1; 1; 0; 1; 0]  # Matriz de una columna (se convierte a vector)
-        
-        # Llamar a la función corregida
-        resultado = confusionMatrix(outputs, targets)
-        
-        # Mostrar resultados
-        println("Resultados de la matriz de confusión:")
-        println(resultado)
-    end
-    
-    test_confusionMatrix()
+# Prueba con una matriz booleana de una sola columna
+outputs_bool = Bool[1; 0; 1; 0; 1]  # Predicciones
+targets_bool = Bool[1; 0; 0; 1; 1]  # Valores reales
+
+# Convertimos a matriz con una sola columna
+outputs_bool_matrix = reshape(outputs_bool, :, 1)
+targets_bool_matrix = reshape(targets_bool, :, 1)
+
+# Ejecutamos la función corregida
+resultados = confusionMatrix(outputs_bool_matrix, targets_bool_matrix)
+println("Resultados con matriz de una sola columna:", resultados)
+
+# Prueba con valores reales y umbral personalizado
+outputs_real = [0.8; 0.3; 0.6; 0.2; 0.9]  # Probabilidades
+targets_bool = Bool[1; 0; 0; 1; 1]  # Valores reales
+
+# Convertimos a matriz con una sola columna
+outputs_real_matrix = reshape(outputs_real, :, 1)
+targets_bool_matrix = reshape(targets_bool, :, 1)
+
+# Probamos con un umbral distinto
+threshold = 0.7
+resultados_umbral = confusionMatrix(outputs_real_matrix, targets_bool_matrix; threshold=threshold)
+println("Resultados con umbral personalizado:", resultados_umbral)

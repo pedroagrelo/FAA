@@ -521,14 +521,10 @@ end
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
 
-     # Verificar si outputs o targets son matrices de una sola columna y convertirlas en vectores
-     if size(outputs, 2) == 1
-        outputs = vec(outputs)  # Convertir la matriz a un vector
+    if size(outputs, 2) == 1
+        return confusionMatrix(vec(outputs), vec(targets))  # Sin `weighted`
     end
     
-    if size(targets, 2) == 1
-        targets = vec(targets)  # Convertir la matriz a un vector
-    end
 
     if size(outputs, 1) != size(targets, 1)
         min_rows = min(size(outputs, 1), size(targets, 1))
