@@ -298,29 +298,18 @@ end
 
 
 include("49202488Z_49472510Q_35592754R_32726079T.jl")
-using Random
-
-# Función para probar el caso multiclase con valores booleanos
-function test_multiclass_boolean_error_case()
-    # Generar salidas aleatorias para clasificación multiclase (3 clases)
-    outputs_multiclass = rand(10, 3) .> 0.5  # Probabilidades de salida (10 muestras, 3 clases)
-    targets_multiclass = falses(10, 3)  # Etiquetas booleanas
-    for i in 1:10
-        targets_multiclass[i, rand(1:3)] = true  # Cada muestra tiene una clase activa
+function test_confusionMatrix()
+        println("Prueba con matriz de una sola columna")
+        
+        outputs = Bool[1; 0; 1; 1; 0]  # Matriz de una columna (se convierte a vector)
+        targets = Bool[1; 1; 0; 1; 0]  # Matriz de una columna (se convierte a vector)
+        
+        # Llamar a la función corregida
+        resultado = confusionMatrix(outputs, targets)
+        
+        # Mostrar resultados
+        println("Resultados de la matriz de confusión:")
+        println(resultado)
     end
-
-    # Imprimir datos de entrada para verificar
-    println("\n🔹 Test clasificación multiclase (valores booleanos):")
-    println("outputs_multiclass (booleanos):\n", outputs_multiclass)
-    println("targets_multiclass (booleanos):\n", targets_multiclass)
-
-    # Ejecutar la función de matriz de confusión con las salidas booleanas (multiclase)
-    result = confusionMatrix(outputs_multiclass, targets_multiclass; weighted=true)
     
-    # Mostrar el resultado
-    println("\nResultado de la matriz de confusión multiclase (booleanos):")
-    println(result)
-end
-
-# Ejecutar la prueba
-test_multiclass_boolean_error_case()
+    test_confusionMatrix()

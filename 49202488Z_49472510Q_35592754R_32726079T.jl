@@ -520,6 +520,16 @@ end
 
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
+
+     # Verificar si outputs o targets son matrices de una sola columna y convertirlas en vectores
+     if size(outputs, 2) == 1
+        outputs = vec(outputs)  # Convertir la matriz a un vector
+    end
+    
+    if size(targets, 2) == 1
+        targets = vec(targets)  # Convertir la matriz a un vector
+    end
+
     if size(outputs, 1) != size(targets, 1)
         min_rows = min(size(outputs, 1), size(targets, 1))
         outputs = outputs[1:min_rows, :]
@@ -590,9 +600,7 @@ end
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
    
     outputs_bool = classifyOutputs(outputs, threshold=threshold)  # Convertir las salidas reales a booleanos
-    if size(outputs, 2) == 1
-        outputs_bool = vec(outputs_bool)  # Asegurar que sea un vector booleano
-    end
+    
     # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
