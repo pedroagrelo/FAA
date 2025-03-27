@@ -985,15 +985,139 @@ end;
 # ------------------------------------- Ejercicio 6 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-#using MLJ
-#using LIBSVM, MLJLIBSVMInterface
-#using NearestNeighborModels, MLJDecisionTreeInterface
+using MLJ
+using LIBSVM, MLJLIBSVMInterface
+using NearestNeighborModels, MLJDecisionTreeInterface
 
-#SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
-#kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
-#3DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
+SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
+kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
+DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
 
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
-   
+
+    #Entrenar redes neuronales:
+    if modelType == :ANN
+        # Extraer los hiperparámetros con valores por defecto si no están definidos
+        topology = modelHyperparameters["topology"]
+        numExecutions = get(modelHyperparameters, "numExecutions", 50)
+        transferFunctions = get(modelHyperparameters, "transferFunctions", fill(σ, length(topology)))
+        maxEpochs = get(modelHyperparameters, "maxEpochs", 1000)
+        minLoss = get(modelHyperparameters, "minLoss", 0.0)
+        learningRate = get(modelHyperparameters, "learningRate", 0.01)
+        validationRatio = get(modelHyperparameters, "validationRatio", 0)
+        maxEpochsVal = get(modelHyperparameters, "maxEpochsVal", 20)
+
+        # Llamada a la función de validación cruzada para RNAs
+        return ANNCrossValidation(topology, dataset, crossValidationIndices;
+                                  numExecutions=numExecutions,
+                                  transferFunctions=transferFunctions,
+                                  maxEpochs=maxEpochs,
+                                  minLoss=minLoss,
+                                  learningRate=learningRate,
+                                  validationRatio=validationRatio,
+                                  maxEpochsVal=maxEpochsVal)
+    end
+
+    #Extraer las entradas (x) y las salidas (y)
+    x, y = dataset 
+
+    # Inicializar vectores para almacenar métricas
+    metric_results = [Float64[] for _ in 1:7]
+
+    # Inicializar matriz de confusión
+    classes = unique(y)  # Identificar clases únicas
+    confusion_matrix = zeros(Int, length(classes), length(classes))
+
+    # Convertir y a String para evitar errores con MLJ
+    y = string.(y)
+
+    # Bucle de validación cruzada
+    for fold in unique(crossValidationIndices)
+        # Dividir datos en entrenamiento y test
+        train_idx = findall(crossValidationIndices .!= fold)
+        test_idx = findall(crossValidationIndices .== fold)
+
+        x_train, y_train = x[train_idx, :], y[train_idx]
+        x_test, y_test = x[test_idx, :], y[test_idx]
+
+        # Convertir entradas a tabla y salidas a categóricas
+        train_inputs = MLJ.table(x_train)
+        test_inputs = MLJ.table(x_test)
+        train_targets = categorical(y_train)
+
+        # Crear modelo en función de modelType
+        model = nothing
+        if modelType == :DoME
+            maximumNodes = modelHyperparameters["maximumNodes"]
+            model = trainClassDoME(x_train, y_train, maximumNodes)  # Llamada a función propia
+            test_outputs = model(x_test)  # Obtiene etiquetas predichas directamente
+
+        elseif modelType == :SVC
+            C = Float64(modelHyperparameters["C"])
+            kernel = modelHyperparameters["kernel"]
+        
+            if kernel == "rbf"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.RadialBasis,
+                                      cost=C,
+                                      gamma=Float64(modelHyperparameters["gamma"]))
+            elseif kernel == "linear"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.Linear, cost=C)
+            elseif kernel == "sigmoid"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.Sigmoid,
+                                      cost=C,
+                                      gamma=Float64(modelHyperparameters["gamma"]),
+                                      coef0=Int32(modelHyperparameters["coef0"]))
+            elseif kernel == "poly"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.Polynomial,
+                                      cost=C,
+                                      degree=Float64(modelHyperparameters["degree"]),
+                                      gamma=Float64(modelHyperparameters["gamma"]),
+                                      coef0=Int32(modelHyperparameters["coef0"]))
+            else
+                error("Kernel no soportado: $kernel")
+            end
+        
+
+        elseif modelType == :DecisionTreeClassifier
+            max_depth = modelHyperparameters["max_depth"]
+            model = DTClassifier(max_depth=max_depth, rng=StableRNG(1))  # Semilla establecida
+
+        elseif modelType == :KNeighborsClassifier
+            n_neighbors = modelHyperparameters["n_neighbors"]
+            model = KNNClassifier(K=n_neighbors)
+
+        else
+            error("Modelo no soportado: $modelType")
+        end
+
+        #verificar si el modelo es nada
+        if model == nothing
+            error("El modelo no se ha creado correctamente. Revisa las condiciones del modelo y los parámetros.")
+        end
+
+        # Crear objeto machine, entrenar y predecir
+        mach = machine(model, MLJ.table(train_inputs), categorical(train_targets))
+        MLJ.fit!(mach, verbosity=0)
+         
+        test_outputs = MLJ.predict(mach, MLJ.table(test_inputs))
+        if modelType in [:DecisionTreeClassifier, :KNeighborsClassifier]
+            test_outputs = mode.(test_outputs)
+        end
+
+        # Calcular métricas y actualizar matriz de confusión
+        for i in 1:length(testTargets)
+            true_label = findfirst(==(testTargets[i]), classes)
+            pred_label = findfirst(==(test_outputs[i]), classes)
+            confusion_matrix[true_label, pred_label] += 1
+        end
+
+        accuracy = sum(diag(confusion_matrix)) / sum(confusion_matrix)
+        push!(metric_results[1], accuracy)  # Guardar métrica de precisión
+    end
+
+    # Promediar métricas
+    averaged_metrics = [mean(m) for m in metric_results]
+
+    return averaged_metrics, confusion_matrix
 end
