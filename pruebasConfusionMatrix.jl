@@ -322,3 +322,4 @@ targets_bool_matrix = reshape(targets_bool, :, 1)
 threshold = 0.7
 resultados_umbral = confusionMatrix(outputs_real_matrix, targets_bool_matrix; threshold=threshold)
 println("Resultados con umbral personalizado:", resultados_umbral)
+
