@@ -806,6 +806,14 @@ function crossvalidation(targets::AbstractArray{Bool,2}, k::Int64)
     return indices
 end;
 
+function crossvalidation(targets::AbstractArray{<:Any,1}, k::Int64)
+    # 1. Convertir el vector heterogéneo a one-hot
+    one_hot_targets = oneHotEncoding(targets)
+    # 2. Llamar a la función crossvalidation que maneja la matriz booleana
+    return crossvalidation(one_hot_targets, k)
+end
+
+
 function ANNCrossValidation(
     topology::AbstractArray{<:Int,1}, 
     dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
@@ -818,23 +826,17 @@ function ANNCrossValidation(
     validationRatio::Real=0, 
     maxEpochsVal::Int=20
 )
-    ###########################################################################
     # 1. Extraer entradas (inputs) y salidas (targets) del dataset
-    ###########################################################################
     inputs, targets = dataset
     # Aseguramos que las entradas sean Float32 para Flux
     inputs = Float32.(inputs)
 
-    ###########################################################################
     # 2. Obtener clases únicas y convertir las salidas a formato one-hot
-    ###########################################################################
-    classes = unique(targets)                 # p.ej. ["Iris-setosa","Iris-versicolor","Iris-virginica"]
+    classes = unique(targets)                 
     one_hot_targets = oneHotEncoding(targets, classes)  # BitMatrix
     one_hot_targets = Float32.(one_hot_targets)         # Convertimos a Float32
 
-    ###########################################################################
     # 3. Preparar variables de validación cruzada (folds)
-    ###########################################################################
     N = size(inputs, 1)
     num_classes = length(classes)
     num_folds   = maximum(crossValidationIndices)
@@ -851,9 +853,7 @@ function ANNCrossValidation(
     # Matriz de confusión global
     global_confusion_matrix = zeros(num_classes, num_classes)
 
-    ###########################################################################
     # 4. Bucle principal por cada fold
-    ###########################################################################
     for fold in 1:num_folds
         # Separar índices de entrenamiento y test
         test_indices  = findall(crossValidationIndices .== fold)
@@ -871,9 +871,7 @@ function ANNCrossValidation(
         local_confusion_matrices = zeros(num_classes, num_classes, numExecutions)
         local_metrics = zeros(7, numExecutions)
 
-        #######################################################################
         # 4.1. Bucle interno: repetir entrenamiento `numExecutions` veces
-        #######################################################################
         for execution in 1:numExecutions
             # Si queremos validación interna (parada temprana)
             if validationRatio > 0
@@ -898,9 +896,7 @@ function ANNCrossValidation(
             # Definimos el tuple de validación
             validationDataset = (val_inputs_, val_targets_)
 
-            ###################################################################
             # 4.2. Entrenar la RNA con trainClassANN
-            ###################################################################
             # IMPORTANTE: trainClassANN debe aceptar (Matrix{Float32}, Matrix{Float32})
             # para que no haya error de tipos.
             model, _, _, _ = trainClassANN(
@@ -914,17 +910,14 @@ function ANNCrossValidation(
                 maxEpochsVal = maxEpochsVal
             )
 
-            ###################################################################
             # 4.3. Generar predicciones en test
-            ###################################################################
-            # Asumimos `model` es un Flux.Chain:
             raw_preds = model(test_inputs_' )   # (num_classes, batch)
             # Extraer la clase de mayor prob:
             test_predictions = argmax(raw_preds, dims=1)  # Array  (1, batch)  con CartesianIndex
             test_predictions = [ci[2] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
 
             # Convertir test_targets_ (one-hot) a Vector{Int}
-            cart_tgts = argmax(test_targets_, dims=2)  # (batch,1)
+            cart_tgts = argmax(test_targets_, dims=2)  
             test_targets_int = [ci[2] for ci in cart_tgts]  # Vector{Int}
 
             ###################################################################
@@ -938,9 +931,7 @@ function ANNCrossValidation(
             local_metrics[:, execution] = metrics_
         end
 
-        #######################################################################
         # 4.5. Promediar resultados en este fold
-        #######################################################################
         fold_conf = mean(local_confusion_matrices, dims=3)[:, :, 1]
         global_confusion_matrix .+= fold_conf
 
@@ -953,9 +944,7 @@ function ANNCrossValidation(
         f1[fold]          = mean(local_metrics[7, :])
     end
 
-    ###########################################################################
     # 5. Devolver métricas y matriz de confusión global
-    ###########################################################################
     return (
         (mean(precision),    std(precision)),
         (mean(error_rate),   std(error_rate)),
@@ -967,18 +956,6 @@ function ANNCrossValidation(
         global_confusion_matrix
     )
 end
-
-
-function ANNCrossValidation(topology::AbstractArray{<:Int,1},
-    dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
-    crossValidationIndices::Array{Int64,1};
-    numExecutions::Int=50,
-    transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
-    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, validationRatio::Real=0, maxEpochsVal::Int=20)
-    #
-    # Codigo a desarrollar
-    #
-end;
 
 
 # ----------------------------------------------------------------------------------------------
