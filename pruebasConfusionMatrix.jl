@@ -192,6 +192,8 @@ function test_confusionMatrix()
     # Ejecutar la prueba
     test_confusionMatrix()
     
+
+include("49202488Z_49472510Q_35592754R_32726079T.jl")
     # Ejemplo de prueba
 outputs = Float64[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1] .+ 1
 targets = Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]
@@ -199,3 +201,126 @@ threshold = 0.5
 
 # Llamar la función para ver cómo se genera outputs_bool
 confusionMatrix(outputs, targets; threshold=threshold)
+
+using Random
+
+# Generar datos de prueba para clasificación binaria
+outputs_binary = rand(10, 1)  # Probabilidades entre 0 y 1
+targets_binary = rand(Bool, 10, 1)  # Etiquetas verdaderas como valores booleanos
+
+# Generar datos de prueba para clasificación multiclase con 3 clases
+outputs_multiclass = rand(10, 3)  # Probabilidades de salida
+targets_multiclass = falses(10, 3)
+for i in 1:10
+    targets_multiclass[i, rand(1:3)] = true  # Asignar una clase aleatoria como verdadera
+end
+
+# Prueba con datos binarios
+println("Test clasificación binaria:")
+result_bin = confusionMatrix(outputs_binary, targets_binary; threshold=0.5, weighted=true)
+println("Resultado binario: ", result_bin)
+
+# Prueba con datos multiclase
+println("\nTest clasificación multiclase:")
+result_multi = confusionMatrix(outputs_multiclass, targets_multiclass; threshold=0.5, weighted=true)
+println("Resultado multiclase: ", result_multi)
+
+
+
+
+
+
+
+using Random
+
+# Función auxiliar para imprimir matrices de forma más clara
+function printMatrix(label, matrix)
+    println(label, ":")
+    println(matrix)
+end
+
+# Generar datos de prueba
+Random.seed!(42)  # Fijamos semilla para reproducibilidad
+
+## 🔹 1. Prueba de clasificación binaria con diferentes thresholds
+outputs_binary = rand(10, 1)  # Probabilidades entre 0 y 1
+targets_binary = rand(Bool, 10, 1)  # Etiquetas verdaderas (booleanas)
+
+println("\n🔹 Test clasificación binaria (threshold = 0.5):")
+result_bin_05 = confusionMatrix(outputs_binary, targets_binary; threshold=0.5, weighted=true)
+println("Resultado: ", result_bin_05)
+
+println("\n🔹 Test clasificación binaria (threshold = 0.7):")
+result_bin_07 = confusionMatrix(outputs_binary, targets_binary; threshold=0.7, weighted=true)
+println("Resultado: ", result_bin_07)
+
+## 🔹 2. Prueba de clasificación multiclase con 3 clases
+outputs_multiclass = rand(10, 3)  # Probabilidades de salida (10 muestras, 3 clases)
+targets_multiclass = falses(10, 3)
+for i in 1:10
+    targets_multiclass[i, rand(1:3)] = true  # Cada muestra tiene una clase activa
+end
+
+println("\n🔹 Test clasificación multiclase (3 clases, threshold = 0.5):")
+result_multi_3 = confusionMatrix(outputs_multiclass, targets_multiclass; threshold=0.5, weighted=true)
+println("Resultado: ", result_multi_3)
+
+## 🔹 3. Caso límite: todas las salidas son `true`
+outputs_all_true = ones(Bool, 10, 3)
+targets_all_true = ones(Bool, 10, 3)
+
+println("\n🔹 Test clasificación multiclase (todo true):")
+result_all_true = confusionMatrix(outputs_all_true, targets_all_true; weighted=true)
+println("Resultado: ", result_all_true)
+
+## 🔹 4. Caso límite: todas las salidas son `false`
+outputs_all_false = zeros(Bool, 10, 3)
+targets_all_false = zeros(Bool, 10, 3)
+
+println("\n🔹 Test clasificación multiclase (todo false):")
+result_all_false = confusionMatrix(outputs_all_false, targets_all_false; weighted=true)
+println("Resultado: ", result_all_false)
+
+## 🔹 5. Caso con clases desbalanceadas
+outputs_imbalanced = rand(10, 3) .> 0.8  # La mayoría de valores serán `false`
+targets_imbalanced = falses(10, 3)
+for i in 1:8
+    targets_imbalanced[i, 1] = true  # La primera clase tiene más ejemplos
+end
+for i in 9:10
+    targets_imbalanced[i, rand(2:3)] = true  # Clases minoritarias
+
+println("\n🔹 Test clasificación multiclase (clases desbalanceadas):")
+result_imbalanced = confusionMatrix(outputs_imbalanced, targets_imbalanced; weighted=true)
+println("Resultado: ", result_imbalanced)
+end
+
+
+
+include("49202488Z_49472510Q_35592754R_32726079T.jl")
+using Random
+
+# Función para probar el caso multiclase con valores booleanos
+function test_multiclass_boolean_error_case()
+    # Generar salidas aleatorias para clasificación multiclase (3 clases)
+    outputs_multiclass = rand(10, 3) .> 0.5  # Probabilidades de salida (10 muestras, 3 clases)
+    targets_multiclass = falses(10, 3)  # Etiquetas booleanas
+    for i in 1:10
+        targets_multiclass[i, rand(1:3)] = true  # Cada muestra tiene una clase activa
+    end
+
+    # Imprimir datos de entrada para verificar
+    println("\n🔹 Test clasificación multiclase (valores booleanos):")
+    println("outputs_multiclass (booleanos):\n", outputs_multiclass)
+    println("targets_multiclass (booleanos):\n", targets_multiclass)
+
+    # Ejecutar la función de matriz de confusión con las salidas booleanas (multiclase)
+    result = confusionMatrix(outputs_multiclass, targets_multiclass; weighted=true)
+    
+    # Mostrar el resultado
+    println("\nResultado de la matriz de confusión multiclase (booleanos):")
+    println(result)
+end
+
+# Ejecutar la prueba
+test_multiclass_boolean_error_case()

@@ -588,22 +588,14 @@ end
 
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    # Comprobar si outputs tiene solo una columna (clasificación binaria o multiclase con una sola clase activa)
+   
+    outputs_bool = classifyOutputs(outputs, threshold=threshold)  # Convertir las salidas reales a booleanos
     if size(outputs, 2) == 1
-        # Si es así, aplicamos classifyOutputs a la columna (usando threshold)
-        outputs_bool = classifyOutputs(outputs[:, 1], threshold=threshold)  # Convertir la columna de salidas reales a valores booleanos
-    else
-        # Si no, seguimos el flujo normal para matrices multiclase
-        outputs_bool = classifyOutputs(outputs, threshold=threshold)  # Convertir las salidas reales a booleanos
+        outputs_bool = vec(outputs_bool)  # Asegurar que sea un vector booleano
     end
-
-    println("outputs_bool: ", outputs_bool)  # Verifica los valores booleanos generados
-
     # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
-
-
 
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)

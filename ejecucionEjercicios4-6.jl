@@ -47,6 +47,15 @@ targets = dataset[:,5];
 @assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[1 1 1; 1 1 1; 1 1 1])
 
 (acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(repeat(unique(targets), 50), targets)
+println("Accuracy: ", acc)
+println("Error Rate: ", errorRate)
+println("Recall: ", recall)
+println("Specificity: ", specificity)
+println("Precision: ", precision)
+println("NPV: ", NPV)
+println("F1: ", F1)
+println("Matriz de Confusión:")
+println(confMatrix)
 @assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[17 17 16; 17 16 17; 16 17 17])
 
 
