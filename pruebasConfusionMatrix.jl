@@ -412,10 +412,10 @@ println("✓ Prueba 7 pasada: Weighted vs. macro")
 
 println("===== Inicio de pruebas =====")
 include("49202488Z_49472510Q_35592754R_32726079T.jl")
-outputs = reshape([true, false, true, true, false, false, true, false], :, 1)  # Matriz 8x1
-targets = reshape([true, false, false, true, false, true, true, false], :, 1)  # Matriz 8x1
+outputs_vec = reshape([true, false, true, true, false, false, true, false], :, 1)  # Matriz 8x1
+targets_vec = reshape([true, false, false, true, false, true, true, false], :, 1)  # Matriz 8x1
 
-accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets)
+accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs_vec, targets_vec)
 
 println("Confusion Matrix:")
 println(confMatrix)
@@ -428,3 +428,50 @@ accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMat
 
 println("Confusion Matrix:")
 println(confMatrix)
+
+
+# Generar dos matrices booleanas de una sola columna
+outputs_vec = Bool[true, false, true, true, false]   # Predicciones (matriz de una sola columna)
+targets_vec = Bool[true, false, false, true, false]  # Valores reales (matriz de una sola columna)
+
+# Función de comparación de resultados
+function comprobar_confusionMatrix(outputs, targets)
+    # Verificar que las matrices de entrada sean de una sola columna
+    @assert ndims(outputs) == 2 && size(outputs, 2) == 1, "La matriz 'outputs' debe ser una matriz de una sola columna."
+    @assert ndims(targets) == 2 && size(targets, 2) == 1, "La matriz 'targets' debe ser una matriz de una sola columna."
+    
+    # Ejecutar la función confusionMatrix
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs_vec, targets_vec)
+
+    # Comprobaciones con valores esperados para el caso de prueba
+    # Comprobamos que las métricas son valores dentro de los rangos esperados
+    @assert accuracy >= 0.0 && accuracy <= 1.0, "La precisión debe estar en el rango [0, 1]."
+    @assert errorRate >= 0.0 && errorRate <= 1.0, "La tasa de error debe estar en el rango [0, 1]."
+    @assert sensitivity >= 0.0 && sensitivity <= 1.0, "La sensibilidad debe estar en el rango [0, 1]."
+    @assert specificity >= 0.0 && specificity <= 1.0, "La especificidad debe estar en el rango [0, 1]."
+    @assert precision >= 0.0 && precision <= 1.0, "La precisión debe estar en el rango [0, 1]."
+    @assert npv >= 0.0 && npv <= 1.0, "El valor predictivo negativo (NPV) debe estar en el rango [0, 1]."
+    @assert F1 >= 0.0 && F1 <= 1.0, "La puntuación F1 debe estar en el rango [0, 1]."
+    
+    # Verificar que la matriz de confusión tiene las dimensiones correctas
+    @assert size(confMatrix) == (2, 2), "La matriz de confusión debe ser de 2x2."
+    
+    # Verificar que los valores de la matriz de confusión sean enteros no negativos
+    @assert all(x >= 0 for x in confMatrix), "Los valores de la matriz de confusión deben ser enteros no negativos."
+    
+    # Si todo es correcto, imprimir los resultados
+    println("Resultados con matriz de una sola columna:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+    println("Confusion Matrix: ", confMatrix)
+end
+
+# Valores reales (como matriz de una sola columna)
+
+# Comprobar resultados para la función confusionMatrix
+comprobar_confusionMatrix(outputs_vec, targets_vec)

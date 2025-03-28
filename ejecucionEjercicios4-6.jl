@@ -58,6 +58,17 @@ println("Matriz de Confusión:")
 println(confMatrix)
 @assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[17 17 16; 17 16 17; 16 17 17])
 
+# Definir las matrices de prueba
+outputs = Bool[true, false, true, true, false, false, true, false]   # Predicciones
+targets = Bool[true, false, false, true, false, true, true, false]   # Valores reales
+
+# Llamar a la función confusionMatrix con un umbral personalizado (0.9)
+(acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(outputs, targets; threshold=0.9)
+
+# Comprobar los resultados con assert
+@assert isapprox(acc, 0.5) && isapprox(errorRate, 0.5) && isapprox(recall, 0.25) && 
+          isapprox(specificity, 0.75) && isapprox(precision, 0.5) && isapprox(NPV, 0.5) &&
+          isapprox(F1, 1/3) && confMatrix == [3 1; 3 1]
 
 
 

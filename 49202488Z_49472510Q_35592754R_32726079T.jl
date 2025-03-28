@@ -526,9 +526,10 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         outputs_vec = vec(outputs)
         targets_vec = vec(targets)
 
-    
+        #accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs_vec, targets_vec)
+
         # Llamar a la función original para calcular la matriz de confusión y las métricas
-        return confusionMatrix(outputs_vec, targets_vec, threshold=threshold)  # Reutilizando el cálculo
+        return confusionMatrix(outputs_vec, targets_vec)  # Reutilizando el cálculo
     end
     
     
