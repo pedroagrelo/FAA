@@ -521,29 +521,17 @@ end
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
 
-    if size(outputs, 2) == 1
-        # Para una sola columna, calcular matriz de confusión 2x2
+    if size(outputs, 2) == 1 && size(targets, 2) == 1
+        # Si la entrada es de una sola columna, convertirla a un vector
         outputs_vec = vec(outputs)
         targets_vec = vec(targets)
-        
-        tp = sum(outputs_vec .& targets_vec)
-        tn = sum((.!outputs_vec) .& (.!targets_vec))
-        fp = sum(outputs_vec .& (.!targets_vec))
-        fn = sum((.!outputs_vec) .& targets_vec)
-        
-        confMatrix = [tp fp; fn tn]  # Matriz de confusión 2x2
-        
-        # Calcular métricas para caso binario
-        sensitivity = tp / (tp + fn)
-        specificity = tn / (tn + fp)
-        precision = tp / (tp + fp)
-        npv = tn / (tn + fn)
-        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
-        accuracy_value = (tp + tn) / (tp + tn + fp + fn)
-        errorRate = 1 - accuracy_value
-        
-        return accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix
+
+    
+        # Llamar a la función original para calcular la matriz de confusión y las métricas
+        return confusionMatrix(outputs_vec, targets_vec, threshold=threshold)  # Reutilizando el cálculo
     end
+    
+    
 
     if size(outputs, 1) != size(targets, 1)
         min_rows = min(size(outputs, 1), size(targets, 1))

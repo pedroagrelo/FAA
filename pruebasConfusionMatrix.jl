@@ -299,7 +299,7 @@ end
 
 include("49202488Z_49472510Q_35592754R_32726079T.jl")
 # Prueba con una matriz booleana de una sola columna
-outputs_bool = Bool[1; 0; 1; 0; 1]  # Predicciones
+outputs_bool = Bool[1; 1; 1; 0; 1]  # Predicciones
 targets_bool = Bool[1; 0; 0; 1; 1]  # Valores reales
 
 # Convertimos a matriz con una sola columna
@@ -323,3 +323,108 @@ threshold = 0.7
 resultados_umbral = confusionMatrix(outputs_real_matrix, targets_bool_matrix; threshold=threshold)
 println("Resultados con umbral personalizado:", resultados_umbral)
 
+
+
+
+# Prueba con valores reales y umbral personalizado
+outputs_real = [0.8; 0.3; 0.6; 0.2; 0.9]  # Probabilidades
+targets_bool = Bool[1; 0; 0; 1; 1]  # Valores reales
+
+# Convertimos a matriz con una sola columna
+outputs_real_matrix = reshape(outputs_real, :, 1)
+targets_bool_matrix = reshape(targets_bool, :, 1)
+
+# Definir el umbral
+threshold = 0.7
+
+# Llamar a la función
+resultados_umbral = confusionMatrix(outputs_real_matrix, targets_bool_matrix; threshold=threshold)
+println("Resultados con umbral personalizado:", resultados_umbral)
+
+
+
+outputs = Bool[1, 0, 1, 0]  # Predicciones perfectas
+targets = Bool[1, 0, 1, 0]  
+outputs_matrix = reshape(outputs, :, 1)
+targets_matrix = reshape(targets, :, 1)
+
+resultados = confusionMatrix(outputs_matrix, targets_matrix)
+@assert resultados == (1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, [2 0; 0 2])
+println("✓ Prueba 1 pasada: Clasificación perfecta")
+
+outputs = Bool[1, 0, 1, 0, 1]  # 3 TP, 1 FP, 1 FN, 0 TN
+targets = Bool[1, 0, 0, 1, 1]  
+outputs_matrix = reshape(outputs, :, 1)
+targets_matrix = reshape(targets, :, 1)
+
+resultados = confusionMatrix(outputs_matrix, targets_matrix)
+@assert resultados[1] == 0.6  # Accuracy = 3/5
+@assert resultados[8] == [2 1; 1 1]  # Matriz de confusión
+println("✓ Prueba 2 pasada: Errores en binario")
+
+outputs = [0.9, 0.2, 0.6, 0.7]  # Umbral = 0.5 → [1, 0, 1, 1]
+targets = Bool[1, 0, 0, 1]  
+outputs_matrix = reshape(outputs, :, 1)
+targets_matrix = reshape(targets, :, 1)
+
+resultados = confusionMatrix(outputs_matrix, targets_matrix; threshold=0.5)
+@assert resultados[8] == [1 2; 0 1]  # 1 TP, 2 FP, 0 FN, 1 TN
+println("✓ Prueba 3 pasada: Umbral 0.5")
+
+outputs = Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0]  # 4 instancias, 3 clases
+targets = Bool[1 0 0; 0 1 0; 0 1 0; 1 0 0]  # 1 error en la tercera fila
+
+resultados = confusionMatrix(outputs, targets)
+@assert resultados[8] == [2 0 0; 1 1 0; 0 0 0]  # Matriz de confusión 3x3
+println("✓ Prueba 4 pasada: Multiclase")
+
+outputs = Bool[1, 0, 1]  
+targets = Bool[0, 1, 0]  
+outputs_matrix = reshape(outputs, :, 1)
+targets_matrix = reshape(targets, :, 1)
+
+resultados = confusionMatrix(outputs_matrix, targets_matrix)
+@assert resultados[1] == 0.0  # Accuracy = 0/3
+@assert resultados[8] == [0 2; 1 0]  # 0 TP, 2 FP, 1 FN, 0 TN
+println("✓ Prueba 5 pasada: Todas incorrectas")
+
+outputs = Bool[]
+targets = Bool[]
+outputs_matrix = reshape(outputs, 0, 1)
+targets_matrix = reshape(targets, 0, 1)
+
+try
+    confusionMatrix(outputs_matrix, targets_matrix)
+    println("✗ Prueba 6 falló: No manejó datos vacíos")
+catch e
+    println("✓ Prueba 6 pasada: Manejó error con datos vacíos")
+end
+
+outputs = Bool[1 0; 0 1; 1 0; 1 0]  # Clase 1 dominante
+targets = Bool[1 0; 0 1; 1 0; 1 0]
+
+resultados_weighted = confusionMatrix(outputs, targets; weighted=true)
+resultados_macro = confusionMatrix(outputs, targets; weighted=false)
+
+# Verificar que las métricas ponderadas difieren de las macro
+@assert resultados_weighted[3] != resultados_macro[3]  # Sensitivity
+println("✓ Prueba 7 pasada: Weighted vs. macro")
+
+println("===== Inicio de pruebas =====")
+include("49202488Z_49472510Q_35592754R_32726079T.jl")
+outputs = reshape([true, false, true, true, false, false, true, false], :, 1)  # Matriz 8x1
+targets = reshape([true, false, false, true, false, true, true, false], :, 1)  # Matriz 8x1
+
+accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets)
+
+println("Confusion Matrix:")
+println(confMatrix)
+
+outputs = reshape([0.8, 0.2, 0.9, 0.7, 0.1, 0.4, 0.95, 0.3], :, 1)  # Matriz 8x1 de probabilidades
+targets = reshape([true, false, false, true, false, true, true, false], :, 1)  # Matriz 8x1
+
+threshold = 0.5
+accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets; threshold=threshold)
+
+println("Confusion Matrix:")
+println(confMatrix)
