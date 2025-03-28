@@ -518,7 +518,6 @@ function printConfusionMatrix(outputs::AbstractArray{<:Real,1}, targets::Abstrac
     println("F1 Score: ", F1)
 end
 
-
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
 
     if size(outputs, 2) == 1 && size(targets, 2) == 1
