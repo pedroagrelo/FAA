@@ -523,6 +523,37 @@ end
 
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
+
+    if size(outputs, 2) == 1
+        # Para una sola columna, calcular matriz de confusión 2x2
+        outputs_vec = vec(outputs)
+        targets_vec = vec(targets)
+        
+        tp = sum(outputs_vec .& targets_vec)
+        tn = sum((.!outputs_vec) .& (.!targets_vec))
+        fp = sum(outputs_vec .& (.!targets_vec))
+        fn = sum((.!outputs_vec) .& targets_vec)
+        
+        confMatrix = [tp fp; fn tn]  # Matriz de confusión 2x2
+        
+        # Calcular métricas para caso binario
+        sensitivity = tp / (tp + fn)
+        specificity = tn / (tn + fp)
+        precision = tp / (tp + fp)
+        npv = tn / (tn + fn)
+        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+        accuracy_value = (tp + tn) / (tp + tn + fp + fn)
+        errorRate = 1 - accuracy_value
+        
+        return accuracy_value, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix
+    end
+
+    if size(outputs, 1) != size(targets, 1)
+        min_rows = min(size(outputs, 1), size(targets, 1))
+        outputs = outputs[1:min_rows, :]
+        targets = targets[1:min_rows, :]
+    end
+    
     n_classes = size(outputs, 2)
 
     # Inicialización de las métricas para cada clase
@@ -532,7 +563,7 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
     npvs = zeros(n_classes)
     F1s = zeros(n_classes)
 
-    # Llamada a la función de la práctica anterior para cada clase
+    # Cálculo de métricas para cada clase
     for i in 1:n_classes
         tp = sum(outputs[:,i] .& targets[:,i])         # Verdaderos positivos
         tn = sum((.!outputs[:,i]) .& (.!targets[:,i])) # Verdaderos negativos
@@ -541,11 +572,12 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         
         sensitivity = tp / (tp + fn)
         specificity = tn / (tn + fp)
-        precision = tp / (tp + fp)
+        precision = tp / (tp + fp)        
         npv = tn / (tn + fn)
-        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+        F1 = 2 * (precision * sensitivity) / (precision + sensitivity) 
         
-        # Asignación de métricas a las variables
+        
+        # Asignación de métricas
         sensitivities[i] = sensitivity
         specificities[i] = specificity
         precisions[i] = precision
@@ -553,8 +585,8 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         F1s[i] = F1
     end
 
-    # Calcular la matriz de confusión
-    confMatrix = [sum(outputs[:, i] .& targets[:, j]) for i in 1:n_classes, j in 1:n_classes]
+    # Calcular la matriz de confusión (corrigiendo filas y columnas)
+    confMatrix = [sum(outputs[:, j] .& targets[:, i]) for i in 1:n_classes, j in 1:n_classes]
 
     # Calcular métricas ponderadas o macro
     if weighted
@@ -567,9 +599,7 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         weighted_precision = sum(precisions .* class_counts) / total
         weighted_npvs = sum(npvs .* class_counts) / total
         weighted_F1 = sum(F1s .* class_counts) / total
-        accuracy = weighted_sensitivity  # Usamos sensibilidad ponderada como precisión
     else
-        accuracy = mean(sensitivities)
         weighted_sensitivity = mean(sensitivities)
         weighted_specificity = mean(specificities)
         weighted_precision = mean(precisions)
@@ -577,35 +607,43 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         weighted_F1 = mean(F1s)
     end
 
-    errorRate = 1 - accuracy
+    # Usar la función accuracy en lugar de cálculo manual
+    accuracy_value = accuracy(outputs, targets)
+    errorRate = 1 - accuracy_value
 
-    return accuracy, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
+    return accuracy_value, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
 end
 
+
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    # Convertir las salidas reales en booleanos usando el umbral
-    outputs_bool = outputs .>= threshold
-    # Llamar a la función principal de confusionMatrix para matrices booleanas
+   
+    outputs_bool = classifyOutputs(outputs, threshold=threshold)  # Convertir las salidas reales a booleanos
+    
+    # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
 
+
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-    # Verificar que todas las etiquetas estén en el vector de clases
-    @assert all([in(label, classes) for label in vcat(targets, outputs)])
-    
-    # Convertir las salidas y objetivos a one-hot encoding
+    # Verificar que todas las etiquetas están en el conjunto de clases
+    @assert all(in.(vcat(targets, outputs), Ref(classes)))
+
+
+    # Convertir outputs y targets a matrices One-Hot
     outputs_encoded = oneHotEncoding(outputs, classes)
     targets_encoded = oneHotEncoding(targets, classes)
-    
-    # Llamar a la función principal de confusionMatrix para matrices booleanas
+
+    # Llamar a la función principal de confusionMatrix con las matrices booleanas
     return confusionMatrix(outputs_encoded, targets_encoded; weighted=weighted)
 end
 
+
 # Función para clasificación multiclase con clases calculadas automáticamente
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
-    # Calcular las clases únicas a partir de las salidas y objetivos
+    # Calcular las clases únicas
     classes = unique(vcat(targets, outputs))
-    # Llamar a la función anterior que requiere las clases como argumento
+
+    # Llamar a la función principal
     return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end
 
@@ -735,54 +773,346 @@ end
 
 
 function crossvalidation(N::Int64, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
+    @assert k > 0 "El número de subconjuntos debe ser mayor que 0"
+    @assert N >= k "N debe ser mayor o igual que k"
+
+    # 1. Crear un vector con k elementos ordenados de 1 hasta k
+    base_vector = collect(1:k)
+
+    # 2. Crear un vector nuevo repitiendo los valores hasta alcanzar una longitud >= N
+    repeated_vector = repeat(base_vector, ceil(Int, N / k))
+
+    # 3. Tomar los N primeros valores
+    cv_vector = repeated_vector[1:N]
+
+    # 4. Desordenar el vector usando shuffle!
+    shuffle!(cv_vector)
+
+    return cv_vector
 end;
 
 function crossvalidation(targets::AbstractArray{Bool,1}, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
+    @assert k > 0 "El número de subconjuntos debe ser mayor que 0"
+    N = length(targets)
+
+    # Crear un vector de índices vacío
+    indices = zeros(Int, N)
+
+    # Partición para instancias positivas
+    indices[targets] .= crossvalidation(sum(targets), k) 
+
+    # Partición para instancias negativas
+    indices[.!targets] .= crossvalidation(sum(.!targets), k)
+
+    return indices
 end;
 
 function crossvalidation(targets::AbstractArray{Bool,2}, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
+    @assert k > 0 "El número de subconjuntos debe ser mayor que 0"
+    N = size(targets, 1)  # Número de filas (patrones)
+    num_classes = size(targets, 2)  # Número de clases (columnas)
+
+    # Crear vector de índices vacío
+    indices = zeros(Int, N)
+
+    # Bucle sobre las clases
+    for class in 1:num_classes
+        # Estratificación para cada clase
+        indices[targets[:, class]] .= crossvalidation(sum(targets[:, class]), k)
+    end
+
+    return indices
 end;
 
 function crossvalidation(targets::AbstractArray{<:Any,1}, k::Int64)
-    #
-    # Codigo a desarrollar
-    #
-end;
+    # 1. Convertir el vector heterogéneo a one-hot
+    one_hot_targets = oneHotEncoding(targets)
+    # 2. Llamar a la función crossvalidation que maneja la matriz booleana
+    return crossvalidation(one_hot_targets, k)
+end
 
-function ANNCrossValidation(topology::AbstractArray{<:Int,1},
+
+function ANNCrossValidation(
+    topology::AbstractArray{<:Int,1}, 
     dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
     crossValidationIndices::Array{Int64,1};
     numExecutions::Int=50,
     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)),
-    maxEpochs::Int=1000, minLoss::Real=0.0, learningRate::Real=0.01, validationRatio::Real=0, maxEpochsVal::Int=20)
-    #
-    # Codigo a desarrollar
-    #
-end;
+    maxEpochs::Int=1000, 
+    minLoss::Real=0.0, 
+    learningRate::Real=0.01, 
+    validationRatio::Real=0, 
+    maxEpochsVal::Int=20
+)
+    # 1. Extraer entradas (inputs) y salidas (targets) del dataset
+    inputs, targets = dataset
+    # Aseguramos que las entradas sean Float32 para Flux
+    inputs = Float32.(inputs)
+
+    # 2. Obtener clases únicas y convertir las salidas a formato one-hot
+    classes = unique(targets)                 
+    one_hot_targets = oneHotEncoding(targets, classes)  # BitMatrix
+    one_hot_targets = Float32.(one_hot_targets)         # Convertimos a Float32
+
+    # 3. Preparar variables de validación cruzada (folds)
+    N = size(inputs, 1)
+    num_classes = length(classes)
+    num_folds   = maximum(crossValidationIndices)
+
+    # Vectores para almacenar métricas en cada fold
+    precision   = zeros(num_folds)
+    error_rate  = zeros(num_folds)
+    sensitivity = zeros(num_folds)
+    specificity = zeros(num_folds)
+    vpp         = zeros(num_folds)
+    vpn         = zeros(num_folds)
+    f1          = zeros(num_folds)
+
+    # Matriz de confusión global
+    global_confusion_matrix = zeros(num_classes, num_classes)
+
+    # 4. Bucle principal por cada fold
+    for fold in 1:num_folds
+        # Separar índices de entrenamiento y test
+        test_indices  = findall(crossValidationIndices .== fold)
+        train_indices = findall(crossValidationIndices .!= fold)
+
+        # Crear subconjunto de entrenamiento
+        train_inputs_  = inputs[train_indices, :]
+        train_targets_ = one_hot_targets[train_indices, :]
+
+        # Crear subconjunto de test
+        test_inputs_   = inputs[test_indices, :]
+        test_targets_  = one_hot_targets[test_indices, :]
+
+        # Matrices locales para almacenar resultados en cada ejecución
+        local_confusion_matrices = zeros(num_classes, num_classes, numExecutions)
+        local_metrics = zeros(7, numExecutions)
+
+        # 4.1. Bucle interno: repetir entrenamiento `numExecutions` veces
+        for execution in 1:numExecutions
+            # Si queremos validación interna (parada temprana)
+            if validationRatio > 0
+                adjustedRatio = validationRatio / (1 - length(test_indices) / N)
+                # holdOut para dividir train en (train, val)
+                split_train, split_val = holdOut(size(train_inputs_, 1), adjustedRatio)
+
+                val_inputs_  = train_inputs_[split_val, :]
+                val_targets_ = train_targets_[split_val, :]
+
+                train_inputs_fold  = train_inputs_[split_train, :]
+                train_targets_fold = train_targets_[split_train, :]
+            else
+                # Sin validación
+                val_inputs_  = zeros(Float32, 0, size(train_inputs_, 2))
+                val_targets_ = zeros(Float32, 0, size(train_targets_, 2))
+
+                train_inputs_fold  = train_inputs_
+                train_targets_fold = train_targets_
+            end
+
+            # Definimos el tuple de validación
+            validationDataset = (val_inputs_, val_targets_)
+
+            # 4.2. Entrenar la RNA con trainClassANN
+            # IMPORTANTE: trainClassANN debe aceptar (Matrix{Float32}, Matrix{Float32})
+            # para que no haya error de tipos.
+            model, _, _, _ = trainClassANN(
+                topology,
+                (train_inputs_fold, train_targets_fold);
+                validationDataset = validationDataset,
+                transferFunctions = transferFunctions,
+                maxEpochs = maxEpochs,
+                minLoss = minLoss,
+                learningRate = learningRate,
+                maxEpochsVal = maxEpochsVal
+            )
+
+            # 4.3. Generar predicciones en test
+            raw_preds = model(test_inputs_' )   # (num_classes, batch)
+            # Extraer la clase de mayor prob:
+            test_predictions = argmax(raw_preds, dims=1)  # Array  (1, batch)  con CartesianIndex
+            test_predictions = [ci[2] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
+
+            # Convertir test_targets_ (one-hot) a Vector{Int}
+            cart_tgts = argmax(test_targets_, dims=2)  
+            test_targets_int = [ci[2] for ci in cart_tgts]  # Vector{Int}
+
+            ###################################################################
+            # 4.4. confusionMatrix (Vector{Int}, Vector{Int})
+            ###################################################################
+            # Debes tener una función confusionMatrix(preds::Vector{Int}, targs::Vector{Int})
+            # que devuelva (matrix, metrics). Por ejemplo, matrix NxN y metrics un vector[7].
+            conf_mat, metrics_ = confusionMatrix(test_predictions, test_targets_int)
+
+            local_confusion_matrices[:, :, execution] = conf_mat
+            local_metrics[:, execution] = metrics_
+        end
+
+        # 4.5. Promediar resultados en este fold
+        fold_conf = mean(local_confusion_matrices, dims=3)[:, :, 1]
+        global_confusion_matrix .+= fold_conf
+
+        precision[fold]   = mean(local_metrics[1, :])
+        error_rate[fold]  = mean(local_metrics[2, :])
+        sensitivity[fold] = mean(local_metrics[3, :])
+        specificity[fold] = mean(local_metrics[4, :])
+        vpp[fold]         = mean(local_metrics[5, :])
+        vpn[fold]         = mean(local_metrics[6, :])
+        f1[fold]          = mean(local_metrics[7, :])
+    end
+
+    # 5. Devolver métricas y matriz de confusión global
+    return (
+        (mean(precision),    std(precision)),
+        (mean(error_rate),   std(error_rate)),
+        (mean(sensitivity),  std(sensitivity)),
+        (mean(specificity),  std(specificity)),
+        (mean(vpp),          std(vpp)),
+        (mean(vpn),          std(vpn)),
+        (mean(f1),           std(f1)),
+        global_confusion_matrix
+    )
+end
 
 
 # ----------------------------------------------------------------------------------------------
 # ------------------------------------- Ejercicio 6 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
-#using MLJ
-#using LIBSVM, MLJLIBSVMInterface
-#using NearestNeighborModels, MLJDecisionTreeInterface
+using MLJ
+using LIBSVM, MLJLIBSVMInterface
+using NearestNeighborModels, MLJDecisionTreeInterface
 
-#SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
-#kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
-#3DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
+SVMClassifier = MLJ.@load SVC pkg=LIBSVM verbosity=0
+kNNClassifier = MLJ.@load KNNClassifier pkg=NearestNeighborModels verbosity=0
+DTClassifier  = MLJ.@load DecisionTreeClassifier pkg=DecisionTree verbosity=0
 
 
 function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}}, crossValidationIndices::Array{Int64,1})
-   
+
+    #Entrenar redes neuronales:
+    if modelType == :ANN
+        # Extraer los hiperparámetros con valores por defecto si no están definidos
+        topology = modelHyperparameters["topology"]
+        numExecutions = get(modelHyperparameters, "numExecutions", 50)
+        transferFunctions = get(modelHyperparameters, "transferFunctions", fill(σ, length(topology)))
+        maxEpochs = get(modelHyperparameters, "maxEpochs", 1000)
+        minLoss = get(modelHyperparameters, "minLoss", 0.0)
+        learningRate = get(modelHyperparameters, "learningRate", 0.01)
+        validationRatio = get(modelHyperparameters, "validationRatio", 0)
+        maxEpochsVal = get(modelHyperparameters, "maxEpochsVal", 20)
+
+        # Llamada a la función de validación cruzada para RNAs
+        return ANNCrossValidation(topology, dataset, crossValidationIndices;
+                                  numExecutions=numExecutions,
+                                  transferFunctions=transferFunctions,
+                                  maxEpochs=maxEpochs,
+                                  minLoss=minLoss,
+                                  learningRate=learningRate,
+                                  validationRatio=validationRatio,
+                                  maxEpochsVal=maxEpochsVal)
+    end
+
+    #Extraer las entradas (x) y las salidas (y)
+    x, y = dataset 
+
+    # Inicializar vectores para almacenar métricas
+    metric_results = [Float64[] for _ in 1:7]
+
+    # Inicializar matriz de confusión
+    classes = unique(y)  # Identificar clases únicas
+    confusion_matrix = zeros(Int, length(classes), length(classes))
+
+    # Convertir y a String para evitar errores con MLJ
+    y = string.(y)
+
+    # Bucle de validación cruzada
+    for fold in unique(crossValidationIndices)
+        # Dividir datos en entrenamiento y test
+        train_idx = findall(crossValidationIndices .!= fold)
+        test_idx = findall(crossValidationIndices .== fold)
+
+        x_train, y_train = x[train_idx, :], y[train_idx]
+        x_test, y_test = x[test_idx, :], y[test_idx]
+
+        # Convertir entradas a tabla y salidas a categóricas
+        train_inputs = MLJ.table(x_train)
+        test_inputs = MLJ.table(x_test)
+        train_targets = categorical(y_train)
+
+        # Crear modelo en función de modelType
+        model = nothing
+        if modelType == :DoME
+            maximumNodes = modelHyperparameters["maximumNodes"]
+            model = trainClassDoME(x_train, y_train, maximumNodes)  # Llamada a función propia
+            test_outputs = model(x_test)  # Obtiene etiquetas predichas directamente
+
+        elseif modelType == :SVC
+            C = Float64(modelHyperparameters["C"])
+            kernel = modelHyperparameters["kernel"]
+        
+            if kernel == "rbf"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.RadialBasis,
+                                      cost=C,
+                                      gamma=Float64(modelHyperparameters["gamma"]))
+            elseif kernel == "linear"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.Linear, cost=C)
+            elseif kernel == "sigmoid"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.Sigmoid,
+                                      cost=C,
+                                      gamma=Float64(modelHyperparameters["gamma"]),
+                                      coef0=Int32(modelHyperparameters["coef0"]))
+            elseif kernel == "poly"
+                model = SVMClassifier(kernel=LIBSVM.Kernel.Polynomial,
+                                      cost=C,
+                                      degree=Float64(modelHyperparameters["degree"]),
+                                      gamma=Float64(modelHyperparameters["gamma"]),
+                                      coef0=Int32(modelHyperparameters["coef0"]))
+            else
+                error("Kernel no soportado: $kernel")
+            end
+        
+
+        elseif modelType == :DecisionTreeClassifier
+            max_depth = modelHyperparameters["max_depth"]
+            model = DTClassifier(max_depth=max_depth, rng=StableRNG(1))  # Semilla establecida
+
+        elseif modelType == :KNeighborsClassifier
+            n_neighbors = modelHyperparameters["n_neighbors"]
+            model = KNNClassifier(K=n_neighbors)
+
+        else
+            error("Modelo no soportado: $modelType")
+        end
+
+        #verificar si el modelo es nada
+        if model == nothing
+            error("El modelo no se ha creado correctamente. Revisa las condiciones del modelo y los parámetros.")
+        end
+
+        # Crear objeto machine, entrenar y predecir
+        mach = machine(model, MLJ.table(train_inputs), categorical(train_targets))
+        MLJ.fit!(mach, verbosity=0)
+         
+        test_outputs = MLJ.predict(mach, MLJ.table(test_inputs))
+        if modelType in [:DecisionTreeClassifier, :KNeighborsClassifier]
+            test_outputs = mode.(test_outputs)
+        end
+
+        # Calcular métricas y actualizar matriz de confusión
+        for i in 1:length(testTargets)
+            true_label = findfirst(==(testTargets[i]), classes)
+            pred_label = findfirst(==(test_outputs[i]), classes)
+            confusion_matrix[true_label, pred_label] += 1
+        end
+
+        accuracy = sum(diag(confusion_matrix)) / sum(confusion_matrix)
+        push!(metric_results[1], accuracy)  # Guardar métrica de precisión
+    end
+
+    # Promediar métricas
+    averaged_metrics = [mean(m) for m in metric_results]
+
+    return averaged_metrics, confusion_matrix
 end

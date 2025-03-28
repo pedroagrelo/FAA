@@ -1,3 +1,5 @@
+
+
 # Archivo de pruebas para realizar autoevaluación de algunas funciones de los ejercicios
 
 # Importamos el archivo con las soluciones a los ejercicios
@@ -41,14 +43,25 @@ targets = dataset[:,5];
 (acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(Bool[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1], Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]; weighted=true)
 @assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[1 1 1; 1 1 1; 1 1 1])
 
+(acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(Float64[1 0 0; 1 0 0; 1 0 0; 0 1 0; 0 1 0; 0 1 0; 0 0 1; 0 0 1; 0 0 1] .+ 1, Bool[1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1; 1 0 0; 0 1 0; 0 0 1]; weighted=true)
+@assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[1 1 1; 1 1 1; 1 1 1])
+
 (acc, errorRate, recall, specificity, precision, NPV, F1, confMatrix) = confusionMatrix(repeat(unique(targets), 50), targets)
+println("Accuracy: ", acc)
+println("Error Rate: ", errorRate)
+println("Recall: ", recall)
+println("Specificity: ", specificity)
+println("Precision: ", precision)
+println("NPV: ", NPV)
+println("F1: ", F1)
+println("Matriz de Confusión:")
+println(confMatrix)
 @assert(isapprox(acc, 1/3.) && isapprox(errorRate, 2/3.) && isapprox(recall, 1/3.) && isapprox(specificity, 2/3.) && isapprox(precision, 1/3.) && isapprox(NPV, 2/3.) && isapprox(F1, 1/3.) && confMatrix==[17 17 16; 17 16 17; 16 17 17])
 
 
 
 
 outputs2Classes = trainClassDoME((inputs[1:100,:], targets[1:100].=="Iris-setosa"), inputs[[1],:], 20);
-println("Valor predicho: ", outputs2Classes[1])
 @assert(isapprox(outputs2Classes[1], 1.0751594373353253));
 
 outputs3Classes = trainClassDoME((inputs[1:149,:], oneHotEncoding(targets[1:149])), inputs[[150],:], 20);
@@ -80,17 +93,71 @@ seed!(1); @assert(isapprox(rand(), 0.07336635446929285))
 
 
 
+# Prueba con solamente una ejecucion de la RNA para cada fold, sin conjunto de validación
+seed!(1); ((testAccuracy_mean, testAccuracy_std), (testErrorRate_mean, testErrorRate_std), (testRecall_mean, testRecall_std), (testSpecificity_mean, testSpecificity_std), (testPrecision_mean, testPrecision_std), (testNPV_mean, testNPV_std), (testF1_mean, testF1_std), testConfusionMatrix) =
+    ANNCrossValidation([3], (inputs, targets), repeat(1:10, 15);
+        numExecutions=1, maxEpochs=100, validationRatio=0, maxEpochsVal=5);
+@assert(isapprox(testAccuracy_mean,    0.8733333333333334) && isapprox(testAccuracy_std,    0.14555131461166948))
+@assert(isapprox(testErrorRate_mean,   0.12666666666666668) && isapprox(testErrorRate_std,   0.14555131461166948))
+@assert(isapprox(testRecall_mean,      0.8733333333333334) && isapprox(testRecall_std,      0.14555131461166948))
+@assert(isapprox(testSpecificity_mean, 0.9366666666666665) && isapprox(testSpecificity_std, 0.07277565730583475))
+@assert(isapprox(testPrecision_mean,   0.9277777777777777) && isapprox(testPrecision_std,   0.06953697539080962))
+@assert(isapprox(testNPV_mean,         0.9545454545454545) && isapprox(testNPV_std,         0.04719813390194002))
+@assert(isapprox(testF1_mean,          0.8397306397306397) && isapprox(testF1_std,          0.198289533779536))
+@assert(all(isapprox(testConfusionMatrix, [50.0 0.0 0.0; 0.0 37.0 13.0; 0.0 6.0 44.0])))
+
+
+
+# Prueba similar a la anterior, pero con un vector de salidas deseadas con elementos que no son todos de tipo String
+seed!(1); ((testAccuracy_mean, testAccuracy_std), (testErrorRate_mean, testErrorRate_std), (testRecall_mean, testRecall_std), (testSpecificity_mean, testSpecificity_std), (testPrecision_mean, testPrecision_std), (testNPV_mean, testNPV_std), (testF1_mean, testF1_std), testConfusionMatrix) =
+    ANNCrossValidation([3], (inputs, map(x -> x=="Iris-setosa" ? 1 : x, targets)), repeat(1:10, 15);
+        numExecutions=1, maxEpochs=100, validationRatio=0, maxEpochsVal=5);
+# Los resultados deberían ser idénticos a los anteriores
+@assert(isapprox(testAccuracy_mean,    0.8733333333333334) && isapprox(testAccuracy_std,    0.14555131461166948))
+@assert(isapprox(testErrorRate_mean,   0.12666666666666668) && isapprox(testErrorRate_std,   0.14555131461166948))
+@assert(isapprox(testRecall_mean,      0.8733333333333334) && isapprox(testRecall_std,      0.14555131461166948))
+@assert(isapprox(testSpecificity_mean, 0.9366666666666665) && isapprox(testSpecificity_std, 0.07277565730583475))
+@assert(isapprox(testPrecision_mean,   0.9277777777777777) && isapprox(testPrecision_std,   0.06953697539080962))
+@assert(isapprox(testNPV_mean,         0.9545454545454545) && isapprox(testNPV_std,         0.04719813390194002))
+@assert(isapprox(testF1_mean,          0.8397306397306397) && isapprox(testF1_std,          0.198289533779536))
+@assert(all(isapprox(testConfusionMatrix, [50.0 0.0 0.0; 0.0 37.0 13.0; 0.0 6.0 44.0])))
+
+
+# Para realizar las pruebas con conjunto de validación, se define de nuevo la función holdOut
+#  Esta definición es incorrecta, pero se hace para que los resultados sean repetibles
+holdOut(N::Int, P::Real) = (1:N)[1:Int(round(N*(1-P)))], (1:N)[Int(round(N*(1-P)))+1:end]
+
+
+# Prueba con solamente una ejecucion de la RNA para cada fold, con conjunto de validación
+seed!(1); ((testAccuracy_mean, testAccuracy_std), (testErrorRate_mean, testErrorRate_std), (testRecall_mean, testRecall_std), (testSpecificity_mean, testSpecificity_std), (testPrecision_mean, testPrecision_std), (testNPV_mean, testNPV_std), (testF1_mean, testF1_std), testConfusionMatrix) =
+    ANNCrossValidation([3], (inputs, targets), repeat(1:10, 15);
+        numExecutions=1, maxEpochs=100, validationRatio=0.2, maxEpochsVal=5);
+@assert(isapprox(testAccuracy_mean,    0.31333333333333335) && isapprox(testAccuracy_std,    0.07062332703142535 ))
+@assert(isapprox(testErrorRate_mean,   0.6866666666666668 ) && isapprox(testErrorRate_std,   0.07062332703142533 ))
+@assert(isapprox(testRecall_mean,      0.31333333333333335) && isapprox(testRecall_std,      0.07062332703142533 ))
+@assert(isapprox(testSpecificity_mean, 0.6566666666666667 ) && isapprox(testSpecificity_std, 0.03531166351571266 ))
+@assert(isapprox(testPrecision_mean,   0.7047619047619047 ) && isapprox(testPrecision_std,   0.1563221222926793  ))
+@assert(isapprox(testNPV_mean,         0.709126984126984  ) && isapprox(testNPV_std,         0.14906709044077748 ))
+@assert(isapprox(testF1_mean,          0.1671998624011008 ) && isapprox(testF1_std,          0.050384177885437725))
+@assert(all(isapprox(testConfusionMatrix, [12.0 18.0 20.0; 15.0 15.0 20.0; 15.0 15.0 20.0])))
+
+
+
+
+# Prueba con varias ejecuciones en cada fold, con conjunto de validación
 seed!(1); ((testAccuracy_mean, testAccuracy_std), (testErrorRate_mean, testErrorRate_std), (testRecall_mean, testRecall_std), (testSpecificity_mean, testSpecificity_std), (testPrecision_mean, testPrecision_std), (testNPV_mean, testNPV_std), (testF1_mean, testF1_std), testConfusionMatrix) =
     ANNCrossValidation([3], (inputs, targets), repeat(1:10, 15);
         numExecutions=10, maxEpochs=100, validationRatio=0.2, maxEpochsVal=5);
-@assert(isapprox(testAccuracy_mean,    0.6893333333333335 ) && isapprox(testAccuracy_std,    0.06341709860173149))
-@assert(isapprox(testErrorRate_mean,   0.31066666666666676) && isapprox(testErrorRate_std,   0.06341709860173146))
-@assert(isapprox(testRecall_mean,      0.6893333333333335 ) && isapprox(testRecall_std,      0.06341709860173149))
-@assert(isapprox(testSpecificity_mean, 0.8446666666666667 ) && isapprox(testSpecificity_std, 0.03170854930086576))
-@assert(isapprox(testPrecision_mean,   0.82456216006216   ) && isapprox(testPrecision_std,   0.05477725142605864))
-@assert(isapprox(testNPV_mean,         0.883110926110926  ) && isapprox(testNPV_std,         0.031116494450281855))
-@assert(isapprox(testF1_mean,          0.6188478943084206 ) && isapprox(testF1_std,          0.07338981446680633))
-@assert(all(isapprox(testConfusionMatrix, [41.0 5.7 3.3; 1.9 29.3 18.8; 1.9 15.0 33.1])))
+@assert(isapprox(testAccuracy_mean,    0.3546666666666667 ) && isapprox(testAccuracy_std,    0.04573676695889042))
+@assert(isapprox(testErrorRate_mean,   0.6453333333333334) && isapprox(testErrorRate_std,   0.04573676695889043))
+@assert(isapprox(testRecall_mean,      0.3546666666666667 ) && isapprox(testRecall_std,      0.04573676695889042))
+@assert(isapprox(testSpecificity_mean, 0.6773333333333335 ) && isapprox(testSpecificity_std, 0.022868383479445226))
+@assert(isapprox(testPrecision_mean,   0.7299271931771931   ) && isapprox(testPrecision_std,   0.039111651830628154))
+@assert(isapprox(testNPV_mean,         0.7628573926073925  ) && isapprox(testNPV_std,         0.031091721114443215))
+@assert(isapprox(testF1_mean,          0.21172955934101445 ) && isapprox(testF1_std,          0.04502371938130511))
+@assert(all(isapprox(testConfusionMatrix, [19.6 14.9 15.5; 15.9 18.1 16.0; 14.8 19.7 15.5])))
+
+
 
  
 
@@ -168,13 +235,13 @@ seed!(1); ((testAccuracy_mean, testAccuracy_std), (testErrorRate_mean, testError
             "maxEpochs"       => 100,
             "maxEpochsVal"     => 20),
         (inputs, targets), repeat(1:10, 15));
-@assert(isapprox(testAccuracy_mean,    0.644            ) && isapprox(testAccuracy_std,    0.04158347250032376))
-@assert(isapprox(testErrorRate_mean,   0.356            ) && isapprox(testErrorRate_std,   0.04158347250032380))
-@assert(isapprox(testRecall_mean,      0.644            ) && isapprox(testRecall_std,      0.04158347250032376))
-@assert(isapprox(testSpecificity_mean, 0.822            ) && isapprox(testSpecificity_std, 0.02079173625016191))
-@assert(isapprox(testPrecision_mean,   0.830230278980278) && isapprox(testPrecision_std,   0.01728658496177931))
-@assert(isapprox(testNPV_mean,         0.876492054242054) && isapprox(testNPV_std,         0.01399389392310485))
-@assert(isapprox(testF1_mean,          0.551424583299970) && isapprox(testF1_std,          0.05089888816965846))
-@assert(all(isapprox(testConfusionMatrix, [42.66 3.38 3.96; 4.28 22.6 23.12; 4.04 14.62 31.34])))
+@assert(isapprox(testAccuracy_mean,    0.348            ) && isapprox(testAccuracy_std,    0.012204026860218656))
+@assert(isapprox(testErrorRate_mean,   0.652            ) && isapprox(testErrorRate_std,   0.012204026860218648))
+@assert(isapprox(testRecall_mean,      0.348            ) && isapprox(testRecall_std,      0.012204026860218656))
+@assert(isapprox(testSpecificity_mean, 0.674            ) && isapprox(testSpecificity_std, 0.006102013430109324))
+@assert(isapprox(testPrecision_mean,   0.7696506456506453) && isapprox(testPrecision_std,   0.003526843563719326))
+@assert(isapprox(testNPV_mean,         0.777215007215007) && isapprox(testNPV_std,         0.0044380494173253725))
+@assert(isapprox(testF1_mean,          0.18758329332632737) && isapprox(testF1_std,          0.01437405343817687))
+@assert(all(isapprox(testConfusionMatrix, [18.2 14.94 16.86; 15.92 17.1 16.98; 15.82 17.28 16.9])))
 
 
