@@ -455,6 +455,67 @@ end;
 # ------------------------------------- Ejercicio 4 --------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
+
+function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
+    VN = sum(.!outputs .& .!targets)  # Verdaderos Negativos
+    VP = sum(outputs .& targets)      # Verdaderos Positivos
+    FP = sum(outputs .& .!targets)    # Falsos Positivos
+    FN = sum(.!outputs .& targets)    # Falsos Negativos
+
+    accuracy = (VP + VN) / (VP + VN + FP + FN)
+    errorRate = 1 - accuracy
+
+    sensitivity = (VP + FN == 0) ? 1.0 : VP / (VP + FN)
+    specificity = (VN + FP == 0) ? 1.0 : VN / (VN + FP)
+    precision = (VP + FP == 0) ? 1.0 : VP / (VP + FP)
+    npv = (VN + FN == 0) ? 1.0 : VN / (VN + FN)
+    F1 = (precision + sensitivity == 0) ? 0.0 : 2 * (precision * sensitivity) / (precision + sensitivity)
+    
+    return accuracy, errorRate, sensitivity, specificity, precision, npv, F1, [VN FP; FN VP]
+end
+
+function confusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
+    bin_outputs = outputs .>= threshold
+    return confusionMatrix(bin_outputs, targets)
+end
+
+function printConfusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
+    # Llamamos a la función confusionMatrix para obtener los resultados
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets)
+    
+    # Mostramos los resultados por pantalla
+    println("Confusion Matrix:")
+    println(confMatrix)
+    
+    println("\nResultados:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+end
+
+function printConfusionMatrix(outputs::AbstractArray{<:Real,1}, targets::AbstractArray{Bool,1}; threshold::Real=0.5)
+    # Llamamos a la función confusionMatrix para convertir los outputs en valores binarios
+    accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs, targets; threshold=threshold)
+    
+    # Mostramos los resultados por pantalla
+    println("Confusion Matrix:")
+    println(confMatrix)
+    
+    println("\nResultados:")
+    println("Accuracy: ", accuracy)
+    println("Error Rate: ", errorRate)
+    println("Sensitivity: ", sensitivity)
+    println("Specificity: ", specificity)
+    println("Precision: ", precision)
+    println("NPV: ", npv)
+    println("F1 Score: ", F1)
+end
+
+
 function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{Bool,1})
     VN = sum(.!outputs .& .!targets)  # Verdaderos Negativos
     VP = sum(outputs .& targets)      # Verdaderos Positivos
@@ -516,6 +577,26 @@ end
 
 
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
+
+    if size(outputs, 2) == 1 && size(targets, 2) == 1
+        # Si la entrada es de una sola columna, convertirla a un vector
+        outputs_vec = vec(outputs)
+        targets_vec = vec(targets)
+
+        #accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs_vec, targets_vec)
+
+        # Llamar a la función original para calcular la matriz de confusión y las métricas
+        return confusionMatrix(outputs_vec, targets_vec)  # Reutilizando el cálculo
+    end
+    
+    
+
+    if size(outputs, 1) != size(targets, 1)
+        min_rows = min(size(outputs, 1), size(targets, 1))
+        outputs = outputs[1:min_rows, :]
+        targets = targets[1:min_rows, :]
+    end
+    
     n_classes = size(outputs, 2)
 
     # Inicialización de las métricas para cada clase
@@ -534,9 +615,10 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         
         sensitivity = tp / (tp + fn)
         specificity = tn / (tn + fp)
-        precision = tp / (tp + fp)
+        precision = tp / (tp + fp)        
         npv = tn / (tn + fn)
-        F1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+        F1 = 2 * (precision * sensitivity) / (precision + sensitivity) 
+        
         
         # Asignación de métricas
         sensitivities[i] = sensitivity
@@ -575,37 +657,38 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
     return accuracy_value, errorRate, weighted_sensitivity, weighted_specificity, weighted_precision, weighted_npvs, weighted_F1, confMatrix
 end
 
+
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; threshold::Real=0.5, weighted::Bool=true)
-    # Convertir las salidas reales en valores One-Hot usando el umbral
-    # Aplicar oneHotEncoding a cada columna de outputs
-    outputs_bool = hcat([oneHotEncoding(outputs[:,j], threshold) for j in 1:size(outputs, 2)]...)
+   
+    outputs_bool = classifyOutputs(outputs, threshold=threshold)  # Convertir las salidas reales a booleanos
     
-    # Llamar a la función principal de confusionMatrix para matrices booleanas
+    # Llamar a la versión principal de confusionMatrix con los datos booleanos
     return confusionMatrix(outputs_bool, targets; weighted=weighted)
 end
 
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}; weighted::Bool=true)
-    # Verificar que todas las etiquetas estén en el vector de clases
-    @assert all([in(label, classes) for label in vcat(targets, outputs)])
-    
-    # Convertir las salidas y objetivos a one-hot encoding
+    # Verificar que todas las etiquetas están en el conjunto de clases
+    @assert all(in.(vcat(targets, outputs), Ref(classes)))
+
+
+    # Convertir outputs y targets a matrices One-Hot
     outputs_encoded = oneHotEncoding(outputs, classes)
     targets_encoded = oneHotEncoding(targets, classes)
-    
-    # Llamar a la función principal de confusionMatrix para matrices booleanas
+
+    # Llamar a la función principal de confusionMatrix con las matrices booleanas
     return confusionMatrix(outputs_encoded, targets_encoded; weighted=weighted)
 end
+
 
 # Función para clasificación multiclase con clases calculadas automáticamente
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
     # Calcular las clases únicas
     classes = unique(vcat(targets, outputs))
-    
+
     # Llamar a la función principal
     return confusionMatrix(outputs, targets, classes; weighted=weighted)
 end
-
 
 using SymDoME
 
@@ -782,6 +865,14 @@ function crossvalidation(targets::AbstractArray{Bool,2}, k::Int64)
     return indices
 end;
 
+function crossvalidation(targets::AbstractArray{<:Any,1}, k::Int64)
+    # 1. Convertir el vector heterogéneo a one-hot
+    one_hot_targets = oneHotEncoding(targets)
+    # 2. Llamar a la función crossvalidation que maneja la matriz booleana
+    return crossvalidation(one_hot_targets, k)
+end
+
+
 function ANNCrossValidation(
     topology::AbstractArray{<:Int,1}, 
     dataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
@@ -800,14 +891,15 @@ function ANNCrossValidation(
     inputs = Float32.(inputs)
 
     # 2. Obtener clases únicas y convertir las salidas a formato one-hot
-    classes = unique(targets)                 
+    classes = unique(targets)
     one_hot_targets = oneHotEncoding(targets, classes)  # BitMatrix
-    one_hot_targets = Float32.(one_hot_targets)         # Convertimos a Float32
 
     # 3. Preparar variables de validación cruzada (folds)
     N = size(inputs, 1)
     num_classes = length(classes)
     num_folds   = maximum(crossValidationIndices)
+    @show num_classes                
+
 
     # Vectores para almacenar métricas en cada fold
     precision   = zeros(num_folds)
@@ -861,6 +953,8 @@ function ANNCrossValidation(
                 train_targets_fold = train_targets_
             end
 
+            val_targets_ = Bool.(val_targets_) # Cosnvertir a booleano para que trainClassANN la acepte
+
             # Definimos el tuple de validación
             validationDataset = (val_inputs_, val_targets_)
 
@@ -882,18 +976,50 @@ function ANNCrossValidation(
             raw_preds = model(test_inputs_' )   # (num_classes, batch)
             # Extraer la clase de mayor prob:
             test_predictions = argmax(raw_preds, dims=1)  # Array  (1, batch)  con CartesianIndex
-            test_predictions = [ci[2] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
+            test_predictions = [ci[1] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
 
             # Convertir test_targets_ (one-hot) a Vector{Int}
-            cart_tgts = argmax(test_targets_, dims=2)  # (batch,1)
-            test_targets_int = [ci[2] for ci in cart_tgts]  # Vector{Int}
+            cart_tgts = argmax(test_targets_, dims=2)  
+            test_targets_int = [ci[2] for ci in vec(cart_tgts)]  # Vector{Int}
+            #test_targets_int = vec(test_targets_)
+            println("test_targets_int: ", test_targets_int)
+            @show typeof(test_targets_int)
+            @show eltype(test_targets_int)
 
+            
+            
+            
             ###################################################################
             # 4.4. confusionMatrix (Vector{Int}, Vector{Int})
             ###################################################################
             # Debes tener una función confusionMatrix(preds::Vector{Int}, targs::Vector{Int})
             # que devuelva (matrix, metrics). Por ejemplo, matrix NxN y metrics un vector[7].
-            conf_mat, metrics_ = confusionMatrix(test_predictions, test_targets_int)
+            
+            acc, err, rec, spec, prec, npv, f1_score, conf_mat = confusionMatrix(test_predictions, test_targets_int)
+            @show length(acc)
+            @show length(err)
+            @show length(rec)
+            @show length(spec)
+            @show length(prec)
+            @show length(npv)
+            @show length(f1)
+            @show length(conf_mat)
+
+            metrics_ = [acc, err, rec, spec, prec, npv, f1_score]
+            
+            @show size(conf_mat)
+            @show test_predictions
+            @show test_targets_int
+            @show size(local_confusion_matrices) 
+            @show size(local_confusion_matrices[:, :, execution])
+            @show size(metrics_)
+            @show size(local_metrics)
+            @show size(local_metrics[:, execution])
+            @show f1
+            @show typeof(acc)
+            @show spec
+
+
 
             local_confusion_matrices[:, :, execution] = conf_mat
             local_metrics[:, execution] = metrics_
