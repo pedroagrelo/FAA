@@ -521,7 +521,6 @@ function printConfusionMatrix(outputs::AbstractArray{<:Real,1}, targets::Abstrac
     println("F1 Score: ", F1)
 end
 
-
 function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
 
     if size(outputs, 2) == 1 && size(targets, 2) == 1
@@ -529,9 +528,10 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
         outputs_vec = vec(outputs)
         targets_vec = vec(targets)
 
-    
+        #accuracy, errorRate, sensitivity, specificity, precision, npv, F1, confMatrix = confusionMatrix(outputs_vec, targets_vec)
+
         # Llamar a la función original para calcular la matriz de confusión y las métricas
-        return confusionMatrix(outputs_vec, targets_vec, threshold=threshold)  # Reutilizando el cálculo
+        return confusionMatrix(outputs_vec, targets_vec)  # Reutilizando el cálculo
     end
     
     
@@ -838,14 +838,14 @@ function ANNCrossValidation(
     inputs = Float32.(inputs)
 
     # 2. Obtener clases únicas y convertir las salidas a formato one-hot
-    classes = unique(targets)                 
+    classes = unique(targets)
     one_hot_targets = oneHotEncoding(targets, classes)  # BitMatrix
-    one_hot_targets = Float32.(one_hot_targets)         # Convertimos a Float32
 
     # 3. Preparar variables de validación cruzada (folds)
     N = size(inputs, 1)
     num_classes = length(classes)
     num_folds   = maximum(crossValidationIndices)
+
 
     # Vectores para almacenar métricas en cada fold
     precision   = zeros(num_folds)
@@ -899,6 +899,8 @@ function ANNCrossValidation(
                 train_targets_fold = train_targets_
             end
 
+            val_targets_ = Bool.(val_targets_) # Cosnvertir a booleano para que trainClassANN la acepte
+
             # Definimos el tuple de validación
             validationDataset = (val_inputs_, val_targets_)
 
@@ -920,19 +922,23 @@ function ANNCrossValidation(
             raw_preds = model(test_inputs_' )   # (num_classes, batch)
             # Extraer la clase de mayor prob:
             test_predictions = argmax(raw_preds, dims=1)  # Array  (1, batch)  con CartesianIndex
-            test_predictions = [ci[2] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
+            test_predictions = [ci[1] for ci in vec(test_predictions)]  # Convertimos a Vector{Int}
 
             # Convertir test_targets_ (one-hot) a Vector{Int}
             cart_tgts = argmax(test_targets_, dims=2)  
-            test_targets_int = [ci[2] for ci in cart_tgts]  # Vector{Int}
+            test_targets_int = [ci[2] for ci in vec(cart_tgts)]  # Vector{Int}
+            #test_targets_int = vec(test_targets_)
 
+            
             ###################################################################
             # 4.4. confusionMatrix (Vector{Int}, Vector{Int})
             ###################################################################
             # Debes tener una función confusionMatrix(preds::Vector{Int}, targs::Vector{Int})
             # que devuelva (matrix, metrics). Por ejemplo, matrix NxN y metrics un vector[7].
-            conf_mat, metrics_ = confusionMatrix(test_predictions, test_targets_int)
-
+            
+            acc, err, rec, spec, prec, npv, f1_score, conf_mat = confusionMatrix(test_predictions, test_targets_int)
+            metrics_ = [acc, err, rec, spec, prec, npv, f1_score]
+            
             local_confusion_matrices[:, :, execution] = conf_mat
             local_metrics[:, execution] = metrics_
         end
