@@ -1,0 +1,22 @@
+using CSV, DataFrames
+
+# Cargar el dataset original
+df = CSV.read("P2/alzheimers_disease_data.csv", DataFrame)
+
+# Lista de columnas seleccionadas por Lasso (sin duplicados y sin PatientID ni DoctorInCharge)
+selected_features = [
+    "Age", "EducationLevel", "Smoking", "AlcoholConsumption", "SleepQuality",
+    "FamilyHistoryAlzheimers", "CardiovascularDisease", "HeadInjury", "Hypertension",
+    "CholesterolLDL", "CholesterolHDL", "CholesterolTriglycerides", "MMSE",
+    "FunctionalAssessment", "MemoryComplaints", "BehavioralProblems", "ADL",
+    "Confusion", "Disorientation", "Diagnosis" # Target variable
+]
+
+# Filtrar el DataFrame
+filtered_df = select(df, selected_features)
+
+# Verifica las primeras filas
+println(first(filtered_df, 5))
+
+# (Opcional) Guardar el nuevo dataset limpio
+CSV.write("P2/alzheimers_limpio.csv", filtered_df)
