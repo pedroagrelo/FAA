@@ -4,7 +4,7 @@ using Random
 using StatsBase   # Si no lo tienes, instala con: import Pkg; Pkg.add("StatsBase")
 
 # 1. Leer el dataset
-df = CSV.read("P2/alzheimers_disease_data.csv", DataFrame)
+df = CSV.read("P2/alzheimers_limpio.csv", DataFrame)
 
 # 2. Separar clases
 df_con  = filter(row -> row.Diagnosis == 1, df)  # Con Alzheimer
@@ -25,6 +25,6 @@ df_balanced = df_balanced[shuffle(1:nrow(df_balanced)), :]
 println(countmap(df_balanced.Diagnosis))
 
 # 7. Guardar a CSV
-CSV.write("alzheimers_balanced.csv", df_balanced)
+CSV.write("alzheimers_limpio_balanced.csv", df_balanced)
 
 println("Subsampling balanceado completado y guardado en 'alzheimers_balanced.csv'.")
