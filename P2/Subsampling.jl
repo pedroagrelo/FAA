@@ -27,4 +27,4 @@ println(countmap(df_balanced.Diagnosis))
 # 7. Guardar a CSV
 CSV.write("alzheimers_limpio_balanced.csv", df_balanced)
 
-println("Subsampling balanceado completado y guardado en 'alzheimers_balanced.csv'.")
+println("Subsampling balanceado completado y guardado en 'alzheimers_limpio_balanced.csv'.")
