@@ -110,9 +110,8 @@ function graficar_matriz_confusion(matriz::Matrix{Int64})
     println(" Matriz de confusión guardada como 'confusion_rna.png'")
 end
 
-# 1. Ejecutar experimentos
-# resultados, conf_matrix_final = ejecutarRNA()
-
+#1. Ejecutar experimentos
+resultados, conf_matrix_final = ejecutarRNA()
 
 # 2. Resumir métricas por fold
 resumen = resumir_metricas(resultados)
@@ -129,12 +128,12 @@ graficar_metricas_desde_csv("resumen_resultados_crossval_rna.csv")
 # anova_resultados = realizar_anova(df)
 
 # Imprimir los resultados del test ANOVA
-# println("Resultados del test ANOVA: ")
-# println(anova_resultados)
 
-df = CSV.read("resultados_crossval_rna.csv", DataFrame)
-anova_results = realizar_anova(df, :AccuracyMean)
+println("Resultados del test ANOVA: ")
+df_anova = CSV.read("resultados_crossval_rna.csv", DataFrame)
+anova_results = realizar_anova(df_anova, :AccuracyMean)
 println(anova_results)
+
 #Como es un promedio de los k folds, la matriz de confusión es necesario redondearla para ajustarse a un entero
 conf_matrix_final = round.(Int64, conf_matrix_final)
 # Guardar la matriz de confusión global como una imagen
