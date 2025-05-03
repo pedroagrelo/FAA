@@ -657,14 +657,22 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
 
     # Creamos los vectores para las metricas que se vayan a usar
     numFolds = maximum(crossValidationIndices);
-    testAccuracy    = Array{Float64,1}(undef, numFolds);
-    testErrorRate   = Array{Float64,1}(undef, numFolds);
-    testRecall      = Array{Float64,1}(undef, numFolds);
-    testSpecificity = Array{Float64,1}(undef, numFolds);
-    testPrecision   = Array{Float64,1}(undef, numFolds);
-    testNPV         = Array{Float64,1}(undef, numFolds);
-    testF1          = Array{Float64,1}(undef, numFolds);
+    testAccuracyMean    = Array{Float64,1}(undef, numFolds);
+    testErrorRateMean   = Array{Float64,1}(undef, numFolds);
+    testRecallMean      = Array{Float64,1}(undef, numFolds);
+    testSpecificityMean = Array{Float64,1}(undef, numFolds);
+    testPrecisionMean   = Array{Float64,1}(undef, numFolds);
+    testNPVMean         = Array{Float64,1}(undef, numFolds);
+    testF1Mean          = Array{Float64,1}(undef, numFolds);
     testConfusionMatrix = zeros(length(classes), length(classes));
+
+    testAccuracyStd     = Array{Float64,1}(undef, numFolds)
+    testErrorRateStd    = Array{Float64,1}(undef, numFolds)
+    testRecallStd       = Array{Float64,1}(undef, numFolds)
+    testSpecificityStd  = Array{Float64,1}(undef, numFolds)
+    testPrecisionStd    = Array{Float64,1}(undef, numFolds)
+    testNPVStd          = Array{Float64,1}(undef, numFolds)
+    testF1Std           = Array{Float64,1}(undef, numFolds)
 
     # Para cada fold, entrenamos
     for numFold in 1:numFolds
@@ -726,18 +734,37 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
         end;
 
         # Almacenamos las metricas como una media de las obtenidas en los entrenamientos de este fold
-        testAccuracy[numFold]    = mean(testAccuracyEachRepetition);
-        testErrorRate[numFold]   = mean(testErrorRateEachRepetition);
-        testRecall[numFold]      = mean(testRecallEachRepetition);
-        testSpecificity[numFold] = mean(testSpecificityEachRepetition);
-        testPrecision[numFold]   = mean(testPrecisionEachRepetition);
-        testNPV[numFold]         = mean(testNPVEachRepetition);
-        testF1[numFold]          = mean(testF1EachRepetition);
+        testAccuracyMean[numFold]    = mean(testAccuracyEachRepetition);
+        testErrorRateMean[numFold]   = mean(testErrorRateEachRepetition);
+        testRecallMean[numFold]      = mean(testRecallEachRepetition);
+        testSpecificityMean[numFold] = mean(testSpecificityEachRepetition);
+        testPrecisionMean[numFold]   = mean(testPrecisionEachRepetition);
+        testNPVMean[numFold]         = mean(testNPVEachRepetition);
+        testF1Mean[numFold]          = mean(testF1EachRepetition);
         testConfusionMatrix    .+= mean(testConfusionMatrixEachRepetition, dims=3)[:,:,1];
+
+        # Calculamos la desviación estándar para cada métrica
+        testAccuracyStd[numFold]    = std(testAccuracyEachRepetition)
+        testErrorRateStd[numFold]   = std(testErrorRateEachRepetition)
+        testRecallStd[numFold]      = std(testRecallEachRepetition)
+        testSpecificityStd[numFold] = std(testSpecificityEachRepetition)
+        testPrecisionStd[numFold]   = std(testPrecisionEachRepetition)
+        testNPVStd[numFold]         = std(testNPVEachRepetition)
+        testF1Std[numFold]          = std(testF1EachRepetition)
 
     end; # for numFold in 1:numFolds
 
-    return (mean(testAccuracy), std(testAccuracy)), (mean(testErrorRate), std(testErrorRate)), (mean(testRecall), std(testRecall)), (mean(testSpecificity), std(testSpecificity)), (mean(testPrecision), std(testPrecision)), (mean(testNPV), std(testNPV)), (mean(testF1), std(testF1)), testConfusionMatrix;
+    #return ((testAccuracyMean), (testAccuracyStd)), ((testErrorRateMean), (testErrorRateStd)), ((testRecallMean), (testRecallStd)), ((testSpecificityMean), (testSpecificityStd)), ((testPrecisionMean), (testPrecisionStd)), ((testNPVMean), (testNPVStd)), ((testF1Mean), (testF1Std)), testConfusionMatrix;
+    return ( (testAccuracyMean, testAccuracyStd),
+    (testErrorRateMean, testErrorRateStd),
+    (testRecallMean, testRecallStd),
+    (testSpecificityMean, testSpecificityStd),
+    (testPrecisionMean, testPrecisionStd),
+    (testNPVMean, testNPVStd),
+    (testF1Mean, testF1Std),
+    testConfusionMatrix )
+ 
+#return testAccuracyMean, testErrorRateMea, testRecall, testSpecificity, testPrecision, testNPV, testF1, testConfusionMatrix;
 
 end;
 
