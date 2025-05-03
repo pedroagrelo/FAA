@@ -4,12 +4,9 @@ using CSV, DataFrames
 df = CSV.read("P2/alzheimers_disease_data.csv", DataFrame)
 
 # Lista de columnas seleccionadas por Lasso (sin duplicados y sin PatientID ni DoctorInCharge)
-selected_features = [
-    "Age", "EducationLevel", "Smoking", "AlcoholConsumption", "SleepQuality",
-    "FamilyHistoryAlzheimers", "CardiovascularDisease", "HeadInjury", "Hypertension",
-    "CholesterolLDL", "CholesterolHDL", "CholesterolTriglycerides", "MMSE",
+selected_features = [ "MMSE",
     "FunctionalAssessment", "MemoryComplaints", "BehavioralProblems", "ADL",
-    "Confusion", "Disorientation", "Diagnosis" # Target variable
+     "Diagnosis" # Target variable
 ]
 
 # Filtrar el DataFrame
