@@ -102,7 +102,7 @@ function graficar_metricas_desde_csv(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("recall_rna.png")
+    savefig("NPV_rna.png")
 
 
 
