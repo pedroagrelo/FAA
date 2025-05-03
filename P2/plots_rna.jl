@@ -13,6 +13,10 @@ function resumir_metricas(df::DataFrame)
         Precision_std = std.(df.PrecisionStd),
         Recall_mean = mean.(df.RecallMean),
         Recall_std = std.(df.RecallStd),
+        Specificity_mean = mean.(df.SpecificityMean),
+        Specificity_std = std.(df.SpecificityStd),
+        NPV_mean = mean.(df.NPVMean),
+        NPV_std = std.(df.NPVStd)
     )
 end
 
@@ -74,6 +78,35 @@ function graficar_metricas_desde_csv(archivo_csv::String)
     )
     savefig("recall_rna.png")
 
+     # Specificity
+     bar(
+        etiquetas, df.Specificity_mean;
+        yerror = df.Specificity_std,
+        ylabel = "Specificity",
+        xlabel = "Arquitectura",
+        title = "Specificity (± std)",
+        rotation = 45,
+        legend = false,
+        size = (700, 500)
+    )
+    savefig("specificity_rna.png")
+
+     # NPV
+     bar(
+        etiquetas, df.NPV_mean;
+        yerror = df.NPV_std,
+        ylabel = "NPV",
+        xlabel = "Arquitectura",
+        title = "NPV (± std)",
+        rotation = 45,
+        legend = false,
+        size = (700, 500)
+    )
+    savefig("recall_rna.png")
+
+
+
+
     println("\n  Gráficas guardadas como PNG.")
 end
 
@@ -122,13 +155,8 @@ CSV.write("resumen_resultados_crossval_rna.csv", resumen)
 # 4. Graficar desde CSV
 graficar_metricas_desde_csv("resumen_resultados_crossval_rna.csv")
 
-# Suponiendo que ya tienes el DataFrame `df` con las métricas
-# Cargar el dataset de resultados
-# df = CSV.read("resultados_crossval_rna.csv", DataFrame)
-# anova_resultados = realizar_anova(df)
 
 # Imprimir los resultados del test ANOVA
-
 println("Resultados del test ANOVA: ")
 df_anova = CSV.read("resultados_crossval_rna.csv", DataFrame)
 anova_results = realizar_anova(df_anova, :AccuracyMean)

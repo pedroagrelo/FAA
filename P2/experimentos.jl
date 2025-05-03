@@ -50,14 +50,14 @@ function ejecutarRNA()
 
     # 4. Probar diferentes arquitecturas
     architectures = [
-        [5],
-        [8],
-        [12],
-        [15],
-        [8, 5],
-        [12, 8],
-        [15, 12],
-        [18, 15]
+        [10],
+        [16],
+        [24],
+        [32],
+        [16, 10],
+        [24, 16],
+        [32, 24],
+        [40, 32]
     ]
 
     #ojo que quede o 10 porcento de test por que fago un k fold 
