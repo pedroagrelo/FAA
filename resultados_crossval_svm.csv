@@ -1,0 +1,9 @@
+Configuración,Kernel,C,Gamma,Degree,Accuracy,F1_Score,Tiempo
+SVM_linear_C0.1,linear,0.1,auto,auto,0.8303,0.8322,1.35
+SVM_linear_C1.0,linear,1.0,auto,auto,0.8309,0.8312,0.15
+SVM_rbf_C0.5_gamma0.01,rbf,0.5,0.01,auto,0.8243,0.8194,1.14
+SVM_rbf_C2.0_gamma0.1,rbf,2.0,0.1,auto,0.8388,0.8409,0.68
+SVM_rbf_C1.0_gamma0.2,rbf,1.0,0.2,auto,0.8414,0.8435,0.68
+SVM_poly_C1.0_gamma0.3_degree5,poly,1.0,0.3,5,0.6112,0.6148,0.12
+SVM_poly_C0.5_gamma0.2_degree4,poly,0.5,0.2,4,0.2329,0.2379,0.17
+SVM_sigmoid_C1.5_gamma0.3,sigmoid,1.5,0.3,auto,0.8368,0.8392,0.17
