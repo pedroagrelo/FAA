@@ -33,6 +33,10 @@ function ejecutarDecisionTree()
         Profundidad = Int[],
         Accuracy = Float64[],
         F1_Score = Float64[],
+        Precision = Float64[],
+        Recall = Float64[],
+        Specificity = Float64[],
+        NPV = Float64[],
         Tiempo = Float64[]
     )
 
@@ -40,14 +44,20 @@ function ejecutarDecisionTree()
         println("\nEvaluando árbol con profundidad = ", profundidad)
 
         tiempo = @elapsed begin
-            (acc, _), (_, _), (_, _), (_, _), (_, _), (_, _), (f1, _), _ =
-                modelCrossValidation(:DecisionTreeClassifier, Dict("max_depth" => profundidad), (X_norm, targets), cv_indices)
+            (acc, _), (_, _), (recall, _), (specificity, _), (precision, _), (npv, _), (f1, _), _ =
+                modelCrossValidation(:DecisionTreeClassifier,
+                    Dict("max_depth" => profundidad),
+                    (X_norm, targets), cv_indices)
         end
 
         push!(resultados, (
             profundidad,
             round(acc, digits=4),
             round(f1, digits=4),
+            round(precision, digits=4),
+            round(recall, digits=4),
+            round(specificity, digits=4),
+            round(npv, digits=4),
             round(tiempo, digits=2)
         ))
     end
