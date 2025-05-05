@@ -29,7 +29,10 @@ function ejecutarRNA()
     df_indices = DataFrame(Fold = cv_indices)
     CSV.write("indices_validacion_cruzada.csv", df_indices)
 
-
+    # Si hiciera repeticiones 3 veces vector para que cubra las repeticiones, la arquitectura y los folds
+    # AccuracyMean[i][j] → fold k del experimento j para la arquitectura i.
+    # Como solo hacemos una repeticion me vale con el 2 vector, arquitecra y folds 
+    # AccuracyMean[i] → 10 valores de accuracy para la arquitectura i.
     resultados = DataFrame(
     Arquitectura = String[],
     AccuracyMean = Vector{Vector{Float64}}(),
@@ -66,8 +69,6 @@ function ejecutarRNA()
 
     #2 3 4 e 5 elementos para favvorecer eses hiperpplanos de 2 en 2 basicamente 10, 6, 16  
 
-    conf_matrix_final = zeros(Int64, 2, 2)  # Inicializa la matriz global
-
     for arch in architectures
         println("\n Evaluando arquitectura: ", arch ) 
         (acc_mean, acc_std),
@@ -103,9 +104,6 @@ function ejecutarRNA()
         NPVStd = npv_std
         ))
 
-
-        # # Acumula la matriz de confusión de esta arquitectura
-        conf_matrix_final = conf_matrix  # Aquí tomamos la matriz de la última arquitectura evaluada
     end
 
 
@@ -115,7 +113,7 @@ function ejecutarRNA()
     # Guardar si quieres
     CSV.write("resultados_crossval_rna.csv", resultados)
 
-    return resultados, conf_matrix_final
+    return resultados
 
 end;
 
