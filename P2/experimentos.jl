@@ -77,7 +77,7 @@ function ejecutarRNA()
         (prec_mean, prec_std),
         (npv_mean, npv_std), 
         (f1_mean, f1_std),
-        conf_matrix =   ANNCrossValidation(
+        _ =   ANNCrossValidation(
             arch, (X_norm, targets), cv_indices;
                 numExecutions=5,
                 maxEpochs=100,

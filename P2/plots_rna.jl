@@ -162,32 +162,5 @@ df_anova = CSV.read("resultados_crossval_rna.csv", DataFrame)
 anova_results = realizar_anova(df_anova, :AccuracyMean)
 println(anova_results)
 
-#Como es un promedio de los k folds, la matriz de confusión es necesario redondearla para ajustarse a un entero
-conf_matrix_final = round.(Int64, conf_matrix_final)
-# Guardar la matriz de confusión global como una imagen
-graficar_matriz_confusion(conf_matrix_final)
 
-println(conf_matrix_final)
-
-#[622 138; 157 603]
-
-# Verdaderos Negativos (No Alzheimer, No Alzheimer): 622
-
-# Falsos Positivos (No Alzheimer, Alzheimer): 138
-
-# Falsos Negativos (Alzheimer, No Alzheimer): 157
-
-# Verdaderos Positivos (Alzheimer, Alzheimer): 603
-
-
-# # 1. Generar matriz global a partir de arquitectura elegida
-# conf_total = obtener_matriz_confusion_global(
-#     [18, 15],  # arquitectura ganadora
-#     X_norm,
-#     targets,
-#     cv_indices
-# )
-
-# # 2. Graficar la matriz
-# graficar_matriz_confusion_global(conf_total)
 
