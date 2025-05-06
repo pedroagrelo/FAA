@@ -2,10 +2,18 @@
 
 # 1. Cargar módulos y paquetes
 push!(LOAD_PATH, "src")  # Asegura que Julia pueda encontrar el módulo
-using CSV, DataFrames
-using Preprocesamiento  # Tu módulo con funciones de preprocesado
 
-println("🚀 Iniciando el preprocesamiento...")
+# include("src/preprocesamiento.jl")
+# include("src/experimento_RNA.jl")
+# include("src/plots_RNA.jl")
+
+using CSV, DataFrames
+using Revise #eliminar antes de entregar proyecto, esto es solo para desarrollo
+using preprocesamiento  # Tu módulo con funciones de preprocesado
+using experimentoRNA #módulo con funcion de experimento y test de  hipótesis RNA
+using plotsRNA #módulo con funciones de resumen y graficando
+
+println("Iniciando el preprocesamiento...")
 
 # 2. Paso 1: Calcular correlaciones (para selección de variables visual)
 calcular_correlaciones("alzheimers_disease_data.csv", "correlacion_con_diagnosis.png")
@@ -27,3 +35,19 @@ analizar_outliers("alzheimers_limpio_balanced.csv")
 
 println("Preprocesamiento finalizado.")
 
+# 6. Ejecutar experimento de RNA con validación cruzada
+println("Ejecutando experimentos con RNA...")
+resultados = ejecutarRNA()
+
+# 7. Guardar resumen de métricas y graficar
+println("Resumiendo y graficando métricas...")
+resumen = resumir_metricas_RNA(resultados)
+CSV.write("resumen_resultados_crossval_rna.csv", resumen)
+graficar_metricas_RNA("resumen_resultados_crossval_rna.csv")
+
+# 8. Realizar test ANOVA
+println("\n Resultados del test ANOVA:")
+anova_results = realizar_anova(resultados, :AccuracyMean)
+println(anova_results)
+
+println("\n Flujo experimento RNA finalizado.")

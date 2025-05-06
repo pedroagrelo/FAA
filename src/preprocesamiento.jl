@@ -1,10 +1,11 @@
-module Preprocesamiento
+module preprocesamiento
 
 using CSV
 using DataFrames
 using Statistics
 using Plots
 using Random
+using StatsBase
 
 export calcular_correlaciones, filtrar_dataset, balancear_dataset, analizar_outliers
 

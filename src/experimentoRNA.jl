@@ -1,6 +1,10 @@
+module experimentoRNA
+
 using CSV, DataFrames, Random, Statistics, StatsBase, HypothesisTests
 include("P1_soluciones.jl")
 
+
+export ejecutarRNA, realizar_anova
 # ------------------------------------------
 # Normalización Min-Max para RNA
 # ------------------------------------------
@@ -53,14 +57,15 @@ function ejecutarRNA()
 
     # 4. Probar diferentes arquitecturas
     architectures = [
-        [10],
+        [12],
         [16],
         [24],
         [32],
-        [16, 10],
+        [48],
+        [16, 12],
         [24, 16],
         [32, 24],
-        [40, 32]
+        [48, 32]
     ]
 
     #ojo que quede o 10 porcento de test por que fago un k fold 
@@ -107,10 +112,10 @@ function ejecutarRNA()
     end
 
 
-    println("\nResultados resumen:")
+    println("\nResultados crossvalidation de la RNA:")
     show(resultados, allcols=true)
 
-    # Guardar si quieres
+    # Guardar en CSV
     CSV.write("resultados_crossval_rna.csv", resultados)
 
     return resultados
@@ -143,3 +148,4 @@ function realizar_anova(df::DataFrame, colname::Symbol = :AccuracyMean)
     return anova_result
 end
 
+end

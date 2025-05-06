@@ -1,8 +1,10 @@
+module plotsRNA
+
 using CSV, DataFrames, Plots, StatsBase, HypothesisTests
-include("experimentos.jl")
 
+export resumir_metricas_RNA, graficar_metricas_RNA 
 
-function resumir_metricas(df::DataFrame)
+function resumir_metricas_RNA(df::DataFrame)
     return DataFrame(
         Arquitectura = df.Arquitectura,
         Accuracy_mean = mean.(df.AccuracyMean),
@@ -20,7 +22,7 @@ function resumir_metricas(df::DataFrame)
     )
 end
 
-function graficar_metricas_desde_csv(archivo_csv::String)
+function graficar_metricas_RNA(archivo_csv::String)
     df = CSV.read(archivo_csv, DataFrame)
 
     # Convertir arquitectura a string más limpio (sin corchetes)
@@ -110,57 +112,26 @@ function graficar_metricas_desde_csv(archivo_csv::String)
     println("\n  Gráficas guardadas como PNG.")
 end
 
-
-function graficar_matriz_confusion(matriz::Matrix{Int64})
-    p = heatmap(
-        matriz,
-        c = :blues,
-        xlabel = "Predicción",
-        ylabel = "Valor real",
-        xticks = ([1, 2], ["No Alzheimer", "Alzheimer"]),
-        yticks = ([1, 2], ["No Alzheimer", "Alzheimer"]),
-        title = "Matriz de Confusión Global (RNA)",
-        size = (500, 400),
-        # annotate = true,
-        colorbar = false
-    )
-
-      # Etiquetas correspondientes a cada celda
-      etiquetas = [["TN", "FP"],
-      ["FN", "TP"]]
-
-    # Añadir anotaciones a la matriz
-    # Añadir anotaciones con valor y etiqueta
-    for i in 1:2
-        for j in 1:2
-            texto = "$(matriz[i, j]) $(etiquetas[i][j])"
-            annotate!(p, j, i, text(texto, :white, 12, halign=:center, valign=:center))
-        end
-    end
- 
-
-    savefig(p, "confusion_rna.png")
-    println(" Matriz de confusión guardada como 'confusion_rna.png'")
 end
 
-#1. Ejecutar experimentos
-resultados, conf_matrix_final = ejecutarRNA()
+# #1. Ejecutar experimentos
+# resultados, conf_matrix_final = ejecutarRNA()
 
-# 2. Resumir métricas por fold
-resumen = resumir_metricas(resultados)
+# # 2. Resumir métricas por fold
+# resumen = resumir_metricas(resultados)
 
-# 3. Guardar el resumen en un CSV
-CSV.write("resumen_resultados_crossval_rna.csv", resumen)
+# # 3. Guardar el resumen en un CSV
+# CSV.write("resumen_resultados_crossval_rna.csv", resumen)
 
-# 4. Graficar desde CSV
-graficar_metricas_desde_csv("resumen_resultados_crossval_rna.csv")
+# # 4. Graficar desde CSV
+# graficar_metricas_desde_csv("resumen_resultados_crossval_rna.csv")
 
 
-# Imprimir los resultados del test ANOVA
-println("Resultados del test ANOVA: ")
-df_anova = CSV.read("resultados_crossval_rna.csv", DataFrame)
-anova_results = realizar_anova(df_anova, :AccuracyMean)
-println(anova_results)
+# # Imprimir los resultados del test ANOVA
+# println("Resultados del test ANOVA: ")
+# df_anova = CSV.read("resultados_crossval_rna.csv", DataFrame)
+# anova_results = realizar_anova(df_anova, :AccuracyMean)
+# println(anova_results)
 
 
 
