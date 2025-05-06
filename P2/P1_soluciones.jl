@@ -890,7 +890,7 @@ function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dat
 
     end; # for numFold in 1:numFolds
 
-    return (mean(testAccuracy), std(testAccuracy)), (mean(testErrorRate), std(testErrorRate)), (mean(testRecall), std(testRecall)), (mean(testSpecificity), std(testSpecificity)), (mean(testPrecision), std(testPrecision)), (mean(testNPV), std(testNPV)), (mean(testF1), std(testF1)), testConfusionMatrix;
+    return testAccuracy, testErrorRate, testRecall, testSpecificity, testPrecision, testNPV, testF1, testConfusionMatrix
 
 end;
 
