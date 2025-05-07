@@ -51,3 +51,25 @@ anova_results = realizar_anova(resultados, :AccuracyMean)
 println(anova_results)
 
 println("\n Flujo experimento RNA finalizado.")
+
+# ------------------------------------------------------
+# Ejecutar experimento con Árboles de Decisión
+# ------------------------------------------------------
+
+# Incluir e importar los módulos (debes tener definidos los módulos con `module ... end`)
+include("src/experimentoDT.jl")
+include("src/plotsDT.jl")
+using .experimentoDT
+using .plotsDT
+
+println("Ejecutando experimentos con Árboles de Decisión...")
+experimentoDT.ejecutarDecisionTree()
+
+println("Resumiendo y graficando métricas del Árbol de Decisión...")
+resumen_dt = plotsDT.resumir_metricas_dt_detalle("resultados_crossval_dt.csv")
+CSV.write("resumen_resultados_crossval_dt.csv", resumen_dt)
+plotsDT.graficar_metricas_barras_dt("resumen_resultados_crossval_dt.csv")
+
+println("\n Flujo experimento Árbol de Decisión finalizado.")
+
+
