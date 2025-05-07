@@ -12,7 +12,6 @@ using Revise #eliminar antes de entregar proyecto, esto es solo para desarrollo
 using preprocesamiento  # Tu módulo con funciones de preprocesado
 using experimentoRNA #módulo con funcion de experimento y test de  hipótesis RNA
 using plotsRNA #módulo con funciones de resumen y graficando
-using CSV, DataFrames
 include("src/experimentoSVM.jl")
 include("src/plotsSVM.jl")
 using .experimentoSVM
@@ -77,7 +76,11 @@ plotsDT.graficar_metricas_barras_dt("resumen_resultados_crossval_dt.csv")
 
 println("\n Flujo experimento Árbol de Decisión finalizado.")
 
-
+using CSV, DataFrames
+include("src/experimentoSVM.jl")
+include("src/plotsSVM.jl")
+using .experimentoSVM
+using .plotsSVM
 # ------------------------------------------------------
 # Ejecutar experimento SVM
 # ------------------------------------------------------
