@@ -39,6 +39,10 @@ function ejecutarSVM()
         Gamma = Union{Missing, Float64}[],
         Degree = Union{Missing, Int}[],
         Accuracy = Vector{Float64}[],
+        Precision = Vector{Float64}[],
+        Recall = Vector{Float64}[],
+        Specifity = Vector{Float64}[],
+        VPN = Vector{Float64}[],
         F1_Score = Vector{Float64}[],
         Tiempo = Float64[]
     )
@@ -52,11 +56,15 @@ function ejecutarSVM()
 
         # Obtener resultados con manejo de errores
         try
-            accs, _, _, _, _, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
+            accs, precisions, recalls, specifities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
 
             # Conversión garantizada a Vector{Float64}
             acc_vec = accs isa Number ? [Float64(accs) for _ in 1:k] : Float64.(accs)
             f1_vec = f1s isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(f1s)
+            prec_vec= precisions isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(precisions)
+            recall_vec = recalls isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(recalls)
+            spec_vec = specifities isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(specifities)
+            vpn_vec = vpns isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(vpns)
 
             nombre = "SVM_$(kernel)_C$(C)" *
                      (gamma !== missing ? "_gamma$(gamma)" : "") *
@@ -73,6 +81,10 @@ function ejecutarSVM()
                 gamma,
                 degree,
                 acc_vec,
+                prec_vec,
+                recall_vec,
+                spec_vec,
+                vpn_vec,
                 f1_vec,
                 round(tiempo, digits=2)
             ))
@@ -83,6 +95,10 @@ function ejecutarSVM()
         end
     end
 
+    for col in [:Accuracy, :F1_Score, :Precision, :Recall, :Specificity, :VPN]
+        resultados[!, col] = [JSON.json(v) for v in resultados[!, col]]
+    end
+    
     CSV.write("resultados_crossval_svm.csv", resultados)
     return resultados
 end

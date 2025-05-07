@@ -1,6 +1,6 @@
 module plotsSVM
 
-using CSV, DataFrames, Plots, StatsBase
+using CSV, DataFrames, Plots, StatsBase, JSON
 
 export resumir_metricas_svm, graficar_metricas_svm
 
@@ -18,10 +18,28 @@ function resumir_metricas_svm(df::DataFrame)
         :Accuracy => std => :Accuracy_std,
         :F1_Score => mean => :F1_mean,
         :F1_Score => std => :F1_std,
+        :Precision => mean => :Precision_mean,
+        :Precision => std => :Precision_std,
+        :Recall => mean => :Recall_mean,
+        :Recall => std => :Recall_std,
+        :Specificity => mean => :Specificity_mean,
+        :Specificity => std => :Specificity_std,
+        :VPN => mean => :VPN_mean,
+        :VPN => std => :VPN_std,
         :Tiempo => mean => :Tiempo
     )
 end
 
+
+function parse_vector_columns!(df::DataFrame, cols::Vector{Symbol})
+    for col in cols
+        df[!, col] = [JSON.parse(row) for row in df[!, col]]
+    end
+    return df
+end
+
+df = CSV.read(archivo_csv, DataFrame)
+parse_vector_columns!(df, [:Accuracy, :F1_Score, :Precision, :Recall, :Specificity, :VPN])
 
 # ------------------------
 # Gráficas de barras 
@@ -55,6 +73,59 @@ function graficar_metricas_svm(archivo_csv::String)
         size = (800, 500)
     )
     savefig("f1_svm.png")
+
+
+    # Precision
+    bar(
+        etiquetas, df.Precision_mean;
+        yerror = df.Precision_std,
+        ylabel = "Precision",
+        xlabel = "Configuración SVM",
+        title = "Precision (± std)",
+        rotation = 45,
+        legend = false,
+        size = (800, 500)
+    )
+    savefig("precision_svm.png")
+
+    # Recall
+    bar(
+        etiquetas, df.Recall_mean;
+        yerror = df.Recall_std,
+        ylabel = "Recall",
+        xlabel = "Configuración SVM",
+        title = "Recall (± std)",
+        rotation = 45,
+        legend = false,
+        size = (800, 500)
+    )
+    savefig("recall_svm.png")
+
+    # Specificity
+    bar(
+        etiquetas, df.Specificity_mean;
+        yerror = df.Specificity_std,
+        ylabel = "Specificity",
+        xlabel = "Configuración SVM",
+        title = "Specificity (± std)",
+        rotation = 45,
+        legend = false,
+        size = (800, 500)
+    )
+    savefig("specificity_svm.png")
+
+    # VPN
+    bar(
+        etiquetas, df.VPN_mean;
+        yerror = df.VPN_std,
+        ylabel = "VPN",
+        xlabel = "Configuración SVM",
+        title = "VPN (± std)",
+        rotation = 45,
+        legend = false,
+        size = (800, 500)
+    )
+    savefig("vpn_svm.png")
 
     println("\nGráficas de SVM guardadas como PNG.")
 end
