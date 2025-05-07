@@ -12,6 +12,11 @@ using Revise #eliminar antes de entregar proyecto, esto es solo para desarrollo
 using preprocesamiento  # Tu módulo con funciones de preprocesado
 using experimentoRNA #módulo con funcion de experimento y test de  hipótesis RNA
 using plotsRNA #módulo con funciones de resumen y graficando
+using CSV, DataFrames
+include("src/experimentoSVM.jl")
+include("src/plotsSVM.jl")
+using .experimentoSVM
+using .plotsSVM
 
 println("Iniciando el preprocesamiento...")
 
@@ -71,5 +76,30 @@ CSV.write("resumen_resultados_crossval_dt.csv", resumen_dt)
 plotsDT.graficar_metricas_barras_dt("resumen_resultados_crossval_dt.csv")
 
 println("\n Flujo experimento Árbol de Decisión finalizado.")
+
+
+# ------------------------------------------------------
+# Ejecutar experimento SVM
+# ------------------------------------------------------
+println("Ejecutando experimentos con SVM...")
+
+resultados = ejecutarSVM()  # <- genera un DataFrame con las métricas por fold
+CSV.write("resultados_svm_raw.csv", resultados)
+
+# -------------------------------------
+# ANOVA sobre Accuracy
+# -------------------------------------
+println("\nResultados del test ANOVA SVM:")
+realizar_anova(resultados)
+
+# -------------------------------------
+# Resumen y gráficas
+# -------------------------------------
+println("Resumiendo métricas por configuración...")
+resumen = resumir_metricas_svm(resultados)
+CSV.write("resultados_resumen_svm.csv", resumen)
+
+println("Generando gráficos de resultados...")
+graficar_metricas_svm("resultados_resumen_svm.csv")
 
 
