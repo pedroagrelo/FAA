@@ -2,6 +2,7 @@ using CSV, DataFrames
 include("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/src/P1_soluciones.jl")
 
 export ejecutar_dome
+export realizar_test_anova_DoME
 
 function ejecutar_dome()
     data = CSV.read("alzheimers_limpio_balanced.csv", DataFrame)
@@ -102,29 +103,33 @@ function ejecutar_dome()
     CSV.write("resultados_crossval_dome.csv", resultados_dome)
     CSV.write("resultados_folds_dome.csv", resultados_fold)
     println("Archivos guardados: resumen y fold a fold.")
+return resultados_dome
 end
 
-# using HypothesisTests, Statistics
+using HypothesisTests, Statistics
 
-# println("\nTest ANOVA sobre Accuracy (por MaxNodes):")
+function realizar_test_anova_DoME()
+    
+    println("\nTest ANOVA sobre Accuracy (por MaxNodes):")
 
-# # Agrupar los valores de accuracy por número de nodos
-# # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
-# df = CSV.read("resultados_folds_dome.csv", DataFrame)
+    # Agrupar los valores de accuracy por número de nodos
+    # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
+    df = CSV.read("resultados_folds_dome.csv", DataFrame)
 
-# # Crear listas de grupos (una lista por cada valor de MaxNodes)
-# grupos_accuracy = [df[df.MaxNodes .== n, :AccuracyMean] for n in unique(df.MaxNodes)]
+    # Crear listas de grupos (una lista por cada valor de MaxNodes)
+    grupos_accuracy = [df[df.MaxNodes .== n, :Accuracy] for n in unique(df.MaxNodes)]
 
-# # Aplicar test ANOVA con splatting (...) para pasar los grupos como argumentos
-# anova_test = OneWayANOVATest(grupos_accuracy...)
-# p_valor = pvalue(anova_test)
+    # Aplicar test ANOVA con splatting (...) para pasar los grupos como argumentos
+    anova_test = OneWayANOVATest(grupos_accuracy...)
+    p_valor = pvalue(anova_test)
 
-# println("p-value: ", p_valor)
-# println("Grados de libertad (entre grupos): ", anova_test.DFt)
-# println("Grados de libertad (dentro de grupos): ", anova_test.DFe)
+    println("p-value: ", p_valor)
+    println("Grados de libertad (entre grupos): ", anova_test.DFt)
+    println("Grados de libertad (dentro de grupos): ", anova_test.DFe)
 
-# if p_valor < 0.05
-#     println("Rechazamos la hipótesis nula: hay diferencias significativas entre las precisiones.")
-# else
-#     println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
-# end
+    if p_valor < 0.05
+        println("Rechazamos la hipótesis nula: hay diferencias significativas entre las precisiones.")
+    else
+        println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
+    end
+end

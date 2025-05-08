@@ -2,6 +2,8 @@ using CSV, DataFrames, Statistics
 include("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/src/P1_soluciones.jl")
 
 export ejecutar_knn
+export realizar_test_anova_knn
+
 function ejecutar_knn()
         
     # 1. Cargar datos
@@ -26,7 +28,18 @@ function ejecutar_knn()
         SpecificityMean = Float64[], SpecificityStd = Float64[],
         NPVMean = Float64[], NPVStd = Float64[]
     )
-
+    
+    resultados_fold_knn = DataFrame(
+        K = Int[],
+        Fold = Int[],
+        Accuracy = Float64[],
+        F1 = Float64[],
+        Recall = Float64[],
+        Precision = Float64[],
+        Specificity = Float64[],
+        NPV = Float64[]
+    )
+    
     # 5. Ejecutar experimentos
     for k in k_valores
         println("\n[KNN] Vecinos = $k")
@@ -50,6 +63,15 @@ function ejecutar_knn()
             mean(npv), std(npv)
         ))
 
+        for (i, _) in enumerate(acc)
+            push!(resultados_fold_knn, (
+                k, i,
+                acc[i], f1[i], recall[i],
+                precision[i], specificity[i], npv[i]
+            ))
+        end
+        
+
         # Mostrar por pantalla
         println("→ Accuracy     : ", round(mean(acc), digits=4), " ± ", round(std(acc), digits=4))
         println("→ F1 Score     : ", round(mean(f1), digits=4), " ± ", round(std(f1), digits=4))
@@ -62,4 +84,35 @@ function ejecutar_knn()
     # 6. Guardar resultados en CSV
     CSV.write("resultados_crossval_knn.csv", resultados_knn)
     println("Resultados guardados en 'resultados_crossval_knn.csv'")
+    CSV.write("resultados_folds_knn.csv", resultados_fold_knn)
+    println("También guardado 'resultados_folds_knn.csv' con métricas por fold.")
+return resultados_knn
+end
+
+
+using HypothesisTests, Statistics
+function realizar_test_anova_knn()
+    println("\nTest ANOVA sobre Accuracy:")
+
+    # Agrupar los valores de accuracy por número de nodos
+    # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
+    df = CSV.read("resultados_folds_knn.csv", DataFrame)
+
+    # Agrupar accuracies por valor de K
+    grouped = groupby(df, :K)
+    grupos_accuracy = [group.Accuracy for group in grouped]
+
+    # Aplicar test ANOVA con splatting (...) para pasar los grupos como argumentos
+    anova_test = OneWayANOVATest(grupos_accuracy...)
+    p_valor = pvalue(anova_test)
+
+    println("p-value: ", p_valor)
+    println("Grados de libertad (entre grupos): ", anova_test.DFt)
+    println("Grados de libertad (dentro de grupos): ", anova_test.DFe)
+
+    if p_valor < 0.05
+        println("Rechazamos la hipótesis nula: hay diferencias significativas entre las precisiones.")
+    else
+        println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
+    end
 end

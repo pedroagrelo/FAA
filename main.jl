@@ -104,25 +104,29 @@ plotsSVM.graficar_metricas_svm("resultados_resumen_svm.csv")
 # ------------------------------------------------------
 # Ejecutar experimento DoME
 # ------------------------------------------------------
-include("src/experimentoDoME.jl")
+include("src/experimento_DoME.jl")
 include("src/plotsDoME.jl")
-using .experimentoDoME
 using .plotsDoME
 
-println("Ejecutando experimento DoME...")
-resultados_dome = experimentoDoME.ejecutar_dome()
+println("Ejecutando experimento DoME y generando gráficas...")
+resultados_dome = ejecutar_dome()
 CSV.write("resultados_crossval_dome.csv", resultados_dome)
 plotsDoME.graficar_metricas_dome("resultados_crossval_dome.csv")
+
+println("\nResultados del test ANOVA DoME:")
+realizar_test_anova_DoME(resultados_dome)
 
 # ------------------------------------------------------
 # Ejecutar experimento KNN
 # ------------------------------------------------------
-include("src/experimentoKNN.jl")
+include("src/experimento_KNN.jl")
 include("src/plotsKNN.jl")
-using .experimentoKNN
 using .plotsKNN
 
-println("Ejecutando experimento KNN...")
-resultados_knn = experimentoKNN.ejecutar_knn()
+println("Ejecutando experimento KNN y generando gráficas...")
+resultados_knn = ejecutar_knn()
 CSV.write("resultados_crossval_knn.csv", resultados_knn)
 plotsKNN.graficar_metricas_knn("resultados_crossval_knn.csv")
+
+println("\nResultados del test ANOVA KNN:")
+realizar_test_anova_knn()
