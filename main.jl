@@ -101,4 +101,28 @@ CSV.write("resultados_resumen_svm.csv", resumen)
 println("Generando gráficos de resultados...")
 graficar_metricas_svm("resultados_resumen_svm.csv")
 
+# ------------------------------------------------------
+# Ejecutar experimento DoME
+# ------------------------------------------------------
+include("src/experimentoDoME.jl")
+include("src/plotsDoME.jl")
+using .experimentoDoME
+using .plotsDoME
 
+println("Ejecutando experimento DoME...")
+resultados_dome = experimentoDoME.ejecutar_dome()
+CSV.write("resultados_crossval_dome.csv", resultados_dome)
+plotsDoME.graficar_metricas_dome("resultados_crossval_dome.csv")
+
+# ------------------------------------------------------
+# Ejecutar experimento KNN
+# ------------------------------------------------------
+include("src/experimentoKNN.jl")
+include("src/plotsKNN.jl")
+using .experimentoKNN
+using .plotsKNN
+
+println("Ejecutando experimento KNN...")
+resultados_knn = experimentoKNN.ejecutar_knn()
+CSV.write("resultados_crossval_knn.csv", resultados_knn)
+plotsKNN.graficar_metricas_knn("resultados_crossval_knn.csv")
