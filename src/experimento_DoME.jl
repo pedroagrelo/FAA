@@ -10,9 +10,8 @@ inputs = normalizeMinMax(inputs)
 # 4. Convertir las etiquetas a strings para DoME
 targets = string.(targets)
 
-# 5. Crear índices para validación cruzada
-k = 5
-indicesCV = crossvalidation(targets, k)
+# Cargar índices de validación cruzada
+indicesCV = CSV.read("indices_crossval.csv", DataFrame).Fold
 
 # -------------------------------
 # 6. Valores de nodos a probar

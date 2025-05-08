@@ -7,8 +7,8 @@ inputs = Matrix(data[:, Not("Diagnosis")])
 targets = string.(data[:, "Diagnosis"])
 inputs = normalizeMinMax(inputs)
 
-# 2. Cargar índices de validación cruzada
-indicesCV = CSV.read("indices_crossval.csv", DataFrame).Fold
+# 2. Cargar índices de validación cruzada comunes
+cv_indices = CSV.read("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/P2/indices_crossval.csv", DataFrame).Fold  #Cargar indices de cv comunes
 
 # 3. Valores de k a probar
 k_valores = [1, 3, 5, 7, 9, 11, 13, 15]

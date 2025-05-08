@@ -8,12 +8,12 @@ function normalizacionDecisionTree(inputs::Matrix{<:Real})
 end
 
 function ejecutarDecisionTree()
-    df = CSV.read("alzheimers_limpio_balanced.csv", DataFrame)
+    df = CSV.read("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/P2/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
     X_norm = normalizacionDecisionTree(inputs)
     k = 10
-    cv_indices = crossvalidation(targets, k)
+    cv_indices = CSV.read("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/P2/indices_crossval.csv", DataFrame).Fold  #Cargar indices de cv comunes
     profundidades = [2, 4, 6, 8, 10, 12]
 
     resultados = DataFrame(
