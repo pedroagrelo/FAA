@@ -48,7 +48,7 @@ graficar_metricas_RNA("resumen_resultados_crossval_rna.csv")
 
 # 8. Realizar test ANOVA
 println("\n Resultados del test ANOVA:")
-anova_results = realizar_anova(resultados, :AccuracyMean)
+anova_results = experimentoRNA.realizar_anova(resultados, :AccuracyMean)
 println(anova_results)
 
 println("\n Flujo experimento RNA finalizado.")
@@ -82,23 +82,23 @@ using .plotsSVM
 # ------------------------------------------------------
 println("Ejecutando experimentos con SVM...")
 
-resultados = ejecutarSVM()  # <- genera un DataFrame con las métricas por fold
+resultados = experimentoSVM.ejecutarSVM()  # <- genera un DataFrame con las métricas por fold
 CSV.write("resultados_svm_raw.csv", resultados)
 
 # -------------------------------------
 # ANOVA sobre Accuracy
 # -------------------------------------
 println("\nResultados del test ANOVA SVM:")
-realizar_anova(resultados)
+experimentoSVM.realizar_anova(resultados)
 
 # -------------------------------------
 # Resumen y gráficas
 # -------------------------------------
 println("Resumiendo métricas por configuración...")
-resumen = resumir_metricas_svm(resultados)
+resumen = plotsSVM.resumir_metricas_svm(resultados)
 CSV.write("resultados_resumen_svm.csv", resumen)
 
 println("Generando gráficos de resultados...")
-graficar_metricas_svm("resultados_resumen_svm.csv")
+plotsSVM.graficar_metricas_svm("resultados_resumen_svm.csv")
 
 
