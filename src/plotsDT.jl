@@ -56,7 +56,7 @@ function graficar_metricas_barras_dt(archivo_resumen::String)
             color = :steelblue,
             size = (800, 500)
         )
-        savefig("$metrica DT.png")
+        savefig("P2/IMÁGENES/$metrica DT.png")
     end
 end
 

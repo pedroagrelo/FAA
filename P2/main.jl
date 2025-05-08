@@ -17,22 +17,22 @@ using plotsRNA #módulo con funciones de resumen y graficando
 println("Iniciando el preprocesamiento...")
 
 # 2. Paso 1: Calcular correlaciones (para selección de variables visual)
-calcular_correlaciones("alzheimers_disease_data.csv", "correlacion_con_diagnosis.png")
+calcular_correlaciones("P2/OTROS ARCHIVOS/alzheimers_disease_data.csv", "P2/IMÁGENES/correlacion_con_diagnosis.png")
 
 # 3. Paso 2: Filtrar el dataset con columnas seleccionadas
 filtrar_dataset(
-    "alzheimers_disease_data.csv",
-    "alzheimers_limpio.csv"
+    "P2/OTROS ARCHIVOS/alzheimers_disease_data.csv",
+    "P2/OTROS ARCHIVOS/alzheimers_limpio.csv"
 )
 
 # 4. Paso 3: Aplicar balanceo por subsampling
 balancear_dataset(
-    "alzheimers_limpio.csv",
-    "alzheimers_limpio_balanced.csv"
+    "P2/OTROS ARCHIVOS/alzheimers_limpio.csv",
+    "P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv"
 )
 
 # 5. Paso 4: Revisar si hay outliers (mensaje informativo)
-analizar_outliers("alzheimers_limpio_balanced.csv")
+analizar_outliers("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv")
 
 println("Preprocesamiento finalizado.")
 
@@ -43,8 +43,8 @@ resultados = ejecutarRNA()
 # 7. Guardar resumen de métricas y graficar
 println("Resumiendo y graficando métricas...")
 resumen = resumir_metricas_RNA(resultados)
-CSV.write("resumen_resultados_crossval_rna.csv", resumen)
-graficar_metricas_RNA("resumen_resultados_crossval_rna.csv")
+CSV.write("P2/RESULTADOS/resumen_resultados_crossval_rna.csv", resumen)
+graficar_metricas_RNA("P2/RESULTADOS/resumen_resultados_crossval_rna.csv")
 
 # 8. Realizar test ANOVA
 println("\n Resultados del test ANOVA:")
@@ -58,32 +58,33 @@ println("\n Flujo experimento RNA finalizado.")
 # ------------------------------------------------------
 
 # Incluir e importar los módulos (debes tener definidos los módulos con `module ... end`)
-include("src/experimentoDT.jl")
-include("src/plotsDT.jl")
+include("../src/experimentoDT.jl")
+include("../src/plotsDT.jl")
 using .experimentoDT
-using .plotsDT
+using .plotsDT: graficar_metricas_barras_dt, resumir_metricas_dt_detalle
+
 
 println("Ejecutando experimentos con Árboles de Decisión...")
 experimentoDT.ejecutarDecisionTree()
 
 println("Resumiendo y graficando métricas del Árbol de Decisión...")
-resumen_dt = plotsDT.resumir_metricas_dt_detalle("resultados_crossval_dt.csv")
-CSV.write("resumen_resultados_crossval_dt.csv", resumen_dt)
-plotsDT.graficar_metricas_barras_dt("resumen_resultados_crossval_dt.csv")
+resumen_dt = resumir_metricas_dt_detalle("P2/RESULTADOS/resultados_crossval_dt.csv")
+CSV.write("P2/RESULTADOS/resumen_resultados_crossval_dt.csv", resumen_dt)
+graficar_metricas_barras_dt("P2/RESULTADOS/resumen_resultados_crossval_dt.csv")
 
 println("\n Flujo experimento Árbol de Decisión finalizado.")
 
-include("src/experimentoSVM.jl")
-include("src/plotsSVM.jl")
-using .experimentoSVM
-using .plotsSVM
+include("../src/experimentoSVM.jl")
+include("../src/plotsSVM.jl")
+using .experimentoSVM: ejecutarSVM
+using .plotsSVM: graficar_metricas_svm, resumir_metricas_svm
 # ------------------------------------------------------
 # Ejecutar experimento SVM
 # ------------------------------------------------------
 println("Ejecutando experimentos con SVM...")
 
-resultados = experimentoSVM.ejecutarSVM()  # <- genera un DataFrame con las métricas por fold
-CSV.write("resultados_svm_raw.csv", resultados)
+resultados = ejecutarSVM()  # <- genera un DataFrame con las métricas por fold
+CSV.write("P2/RESULTADOS/resultados_svm_raw.csv", resultados)
 
 # -------------------------------------
 # ANOVA sobre Accuracy
@@ -95,10 +96,35 @@ experimentoSVM.realizar_anova(resultados)
 # Resumen y gráficas
 # -------------------------------------
 println("Resumiendo métricas por configuración...")
-resumen = plotsSVM.resumir_metricas_svm(resultados)
-CSV.write("resultados_resumen_svm.csv", resumen)
+resumen = resumir_metricas_svm(resultados)
+CSV.write("P2/RESULTADOS/resultados_resumen_svm.csv", resumen)
 
 println("Generando gráficos de resultados...")
-plotsSVM.graficar_metricas_svm("resultados_resumen_svm.csv")
+graficar_metricas_svm("P2/RESULTADOS/resultados_resumen_svm.csv")
 
 
+# ------------------------------------------------------
+# Ejecutar experimento DoME
+# ------------------------------------------------------
+include("../src/experimentoDoME.jl")
+include("../src/plotsDoME.jl")
+using .experimentoDoME: ejecutar_dome
+using .plotsDoME: graficar_metricas_dome
+
+println("Ejecutando experimento DoME...")
+resultados_dome = ejecutar_dome()
+CSV.write("P2/RESULTADOS/resultados_crossval_dome.csv", resultados_dome)
+graficar_metricas_dome("P2/RESULTADOS/resultados_crossval_dome.csv")
+
+# ------------------------------------------------------
+# Ejecutar experimento KNN
+# ------------------------------------------------------
+include("../src/experimentoKNN.jl")
+include("../src/plotsKNN.jl")
+using .experimentoKNN: ejecutar_knn
+using .plotsKNN: graficar_metricas_knn
+
+println("Ejecutando experimento KNN...")
+resultados_knn = ejecutar_knn()
+CSV.write("P2/RESULTADOS/resultados_crossval_knn.csv", resultados_knn)
+graficar_metricas_knn("P2/RESULTADOS/resultados_crossval_knn.csv")

@@ -5,7 +5,7 @@ using Plots
 using StatsPlots  # Para heatmap con nombres
 
 # 1. Leer el archivo CSV
-df = CSV.read("P2/alzheimers_disease_data.csv", DataFrame)
+df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_disease_data.csv", DataFrame)
 
 # 2. Seleccionar solo columnas numéricas
 numeric_df = select(df, names(df, eltype.(eachcol(df)) .<: Number))
@@ -34,6 +34,6 @@ heatmap(
 )
 
 # 7. Guardar la figura
-savefig("correlacion_alzheimer.png")
+savefig("P2/IMÁGENES/correlacion_alzheimer.png")
 
 println("¡Hecho! Heatmap guardado en 'correlacion_alzheimer.png'.")

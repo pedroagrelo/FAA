@@ -1,5 +1,5 @@
 using CSV, DataFrames, Random, Statistics
-include("P1_soluciones.jl")  # Aquí están las funciones como crossvalidation y normalizeMinMax
+include("P2/src/P1_soluciones.jl")  # Aquí están las funciones como crossvalidation y normalizeMinMax
 using DecisionTree
 
 # ------------------------------------------
@@ -15,7 +15,7 @@ end
 function ejecutarDecisionTree()
 
     # 1. Leer dataset limpio
-    df = CSV.read("alzheimers_limpio_balanced.csv", DataFrame)
+    df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
 
@@ -65,7 +65,7 @@ function ejecutarDecisionTree()
     println("\nResumen resultados Árbol de Decisión:")
     show(resultados, allcols=true)
 
-    CSV.write("resultados_crossval_dt.csv", resultados)
+    CSV.write("P2/RESULTADOS/resultados_crossval_dt.csv", resultados)
 
 end
 

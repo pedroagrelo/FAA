@@ -39,7 +39,7 @@ function graficar_metricas_RNA(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("accuracy_rna.png")
+    savefig("P2/IMÁGENES/accuracy_rna.png")
 
     # F1
     bar(
@@ -52,7 +52,7 @@ function graficar_metricas_RNA(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("f1_rna.png")
+    savefig("P2/IMÁGENES/f1_rna.png")
 
     # Precision
     bar(
@@ -65,7 +65,7 @@ function graficar_metricas_RNA(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("precision_rna.png")
+    savefig("P2/IMÁGENES/precision_rna.png")
 
     # Recall
     bar(
@@ -78,7 +78,7 @@ function graficar_metricas_RNA(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("recall_rna.png")
+    savefig("P2/IMÁGENES/recall_rna.png")
 
      # Specificity
      bar(
@@ -91,7 +91,7 @@ function graficar_metricas_RNA(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("specificity_rna.png")
+    savefig("P2/IMÁGENES/specificity_rna.png")
 
      # NPV
      bar(
@@ -104,7 +104,7 @@ function graficar_metricas_RNA(archivo_csv::String)
         legend = false,
         size = (700, 500)
     )
-    savefig("NPV_rna.png")
+    savefig("P2/IMÁGENES/NPV_rna.png")
 
 
 

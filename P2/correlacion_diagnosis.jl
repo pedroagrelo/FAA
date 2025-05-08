@@ -5,7 +5,7 @@ using Plots
 
 
 # 1. Leer el archivo CSV
-df = CSV.read("P2/alzheimers_disease_data.csv", DataFrame)
+df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_disease_data.csv", DataFrame)
 
 # 2. Convertir Diagnosis a número si no lo es (opcional)
 if !(eltype(df.Diagnosis) <: Number)
@@ -36,5 +36,5 @@ bar(
 )
 
 # 7. Guardar figura
-savefig("correlacion_con_diagnosis.png")
+savefig("IMÁGENES/correlacion_con_diagnosis.png")
 println("¡Hecho! Correlación con Diagnosis guardada como imagen.")

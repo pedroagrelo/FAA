@@ -57,7 +57,7 @@ function graficar_metricas_svm(archivo_csv::String)
         legend = false,
         size = (800, 500)
     )
-    savefig("accuracy_svm.png")
+    savefig("P2/IMÁGENES/accuracy_svm.png")
 
     # F1-score
     bar(
@@ -70,7 +70,7 @@ function graficar_metricas_svm(archivo_csv::String)
         legend = false,
         size = (800, 500)
     )
-    savefig("f1_svm.png")
+    savefig("P2/IMÁGENES/f1_svm.png")
 
 
     # Precision
@@ -84,7 +84,7 @@ function graficar_metricas_svm(archivo_csv::String)
         legend = false,
         size = (800, 500)
     )
-    savefig("precision_svm.png")
+    savefig("P2/IMÁGENES/precision_svm.png")
 
     # Recall
     bar(
@@ -97,7 +97,7 @@ function graficar_metricas_svm(archivo_csv::String)
         legend = false,
         size = (800, 500)
     )
-    savefig("recall_svm.png")
+    savefig("P2/IMÁGENES/recall_svm.png")
 
     # Specificity
     bar(
@@ -110,7 +110,7 @@ function graficar_metricas_svm(archivo_csv::String)
         legend = false,
         size = (800, 500)
     )
-    savefig("specificity_svm.png")
+    savefig("P2/IMÁGENES/specificity_svm.png")
 
     # VPN
     bar(
@@ -123,7 +123,7 @@ function graficar_metricas_svm(archivo_csv::String)
         legend = false,
         size = (800, 500)
     )
-    savefig("vpn_svm.png")
+    savefig("P2/IMÁGENES/vpn_svm.png")
 
     println("\nGráficas de SVM guardadas como PNG.")
 end

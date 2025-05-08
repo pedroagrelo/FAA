@@ -16,4 +16,4 @@ filtered_df = select(df, selected_features)
 println(first(filtered_df, 5))
 
 # (Opcional) Guardar el nuevo dataset limpio
-CSV.write("P2/alzheimers_limpio.csv", filtered_df)
+CSV.write("P2/OTROS ARCHIVOS/alzheimers_limpio.csv", filtered_df)

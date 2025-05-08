@@ -23,7 +23,7 @@ end
 
 
 # Carga tu dataset aquí (cambia la ruta si es necesario)
-df = CSV.read("P2/alzheimers_disease_data.csv", DataFrame)
+df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_disease_data.csv", DataFrame)
 
 # Ejecuta el análisis
 contar_outliers_iqr(df)

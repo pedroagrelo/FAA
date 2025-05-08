@@ -27,7 +27,7 @@ function graficar_metricas_knn(archivo_csv::String)
             legend = false,
             size = (800, 500)
         )
-        savefig("$metrica _knn.png")
+        savefig("P2/IMÁGENES/$metrica _knn.png")
     end
 
     println("Gráficas guardadas como PNG para KNN.")
