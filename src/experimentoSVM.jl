@@ -18,7 +18,7 @@ function ejecutarSVM()
     targets = Vector(df.Diagnosis)
     X_norm = normalizacionANN(inputs)
     k = 10
-    cv_indices = crossvalidation(targets, k)
+    cv_indices = CSV.read("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/P2/indices_crossval.csv", DataFrame).Fold 
 
     svm_configs = [
         Dict("kernel" => "linear", "C" => 0.1),
