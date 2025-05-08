@@ -3,15 +3,15 @@
 # 1. Cargar módulos y paquetes
 push!(LOAD_PATH, "src")  # Asegura que Julia pueda encontrar el módulo
 
-# include("src/preprocesamiento.jl")
-# include("src/experimento_RNA.jl")
-# include("src/plots_RNA.jl")
+include("../src/preprocesamiento.jl")
+include("../src/experimentoRNA.jl")
+include("../src/plotsRNA.jl")
 
 using CSV, DataFrames
 using Revise #eliminar antes de entregar proyecto, esto es solo para desarrollo
-using preprocesamiento  # Tu módulo con funciones de preprocesado
-using experimentoRNA #módulo con funcion de experimento y test de  hipótesis RNA
-using plotsRNA #módulo con funciones de resumen y graficando
+using .preprocesamiento  # Tu módulo con funciones de preprocesado
+using .experimentoRNA #módulo con funcion de experimento y test de  hipótesis RNA
+using .plotsRNA #módulo con funciones de resumen y graficando
 
 
 println("Iniciando el preprocesamiento...")
@@ -44,6 +44,7 @@ resultados = ejecutarRNA()
 println("Resumiendo y graficando métricas...")
 resumen = resumir_metricas_RNA(resultados)
 CSV.write("P2/RESULTADOS/resumen_resultados_crossval_rna.csv", resumen)
+print(resumen)
 graficar_metricas_RNA("P2/RESULTADOS/resumen_resultados_crossval_rna.csv")
 
 # 8. Realizar test ANOVA

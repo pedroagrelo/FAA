@@ -666,22 +666,23 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
     testF1Mean          = Array{Float64,1}(undef, numFolds);
     testConfusionMatrix = zeros(length(classes), length(classes));
 
-    testAccuracyStd     = Array{Float64,1}(undef, numFolds)
-    testErrorRateStd    = Array{Float64,1}(undef, numFolds)
-    testRecallStd       = Array{Float64,1}(undef, numFolds)
-    testSpecificityStd  = Array{Float64,1}(undef, numFolds)
-    testPrecisionStd    = Array{Float64,1}(undef, numFolds)
-    testNPVStd          = Array{Float64,1}(undef, numFolds)
-    testF1Std           = Array{Float64,1}(undef, numFolds)
 
     # Para cada fold, entrenamos
     for numFold in 1:numFolds
 
         # Dividimos los datos en entrenamiento y test
         trainingInputs    = inputs[crossValidationIndices.!=numFold,:];
-        testInputs        = inputs[crossValidationIndices.==numFold,:];
+        testInputs        = inputs[crossValidationIndices.==numFold,:]; 
         trainingTargets   = targets[crossValidationIndices.!=numFold,:];
         testTargets       = targets[crossValidationIndices.==numFold,:];
+
+         # Calcular los parámetros de normalización usando solo los datos de entrenamiento
+        normalizationParams = calculateMinMaxNormalizationParameters(trainingInputs)
+
+        # Normalizamos los conjuntos de entrenamiento y prueba
+        trainingInputsNorm = normalizeMinMax(trainingInputs, normalizationParams)
+        testInputsNorm = normalizeMinMax(testInputs, normalizationParams)
+
 
         # Como el entrenamiento de RR.NN.AA. es no determinístico, hay que entrenar varias veces, y
         #  se crean vectores adicionales para almacenar las metricas para cada entrenamiento
@@ -708,9 +709,9 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
                 # (trainingIndices, validationIndices) = holdOut(size(trainingInputs,1), validationRatio*numFolds/(numFolds-1));
 
                 # Entrenamos la RNA, teniendo cuidado de codificar las salidas deseadas correctamente
-                ann, = trainClassANN(topology, (trainingInputs[trainingIndices,:],   trainingTargets[trainingIndices,:]),
+                ann, = trainClassANN(topology, (trainingInputsNorm[trainingIndices,:],   trainingTargets[trainingIndices,:]),
                     validationDataset = (trainingInputs[validationIndices,:], trainingTargets[validationIndices,:]),
-                    testDataset =       (testInputs,                          testTargets);
+                    testDataset =       (testInputsNorm,                          testTargets);
                     transferFunctions = transferFunctions,
                     maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate, maxEpochsVal=maxEpochsVal);
                     
@@ -718,8 +719,8 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
 
                 # Si no se desea usar conjunto de validacion, se entrena unicamente con conjuntos de entrenamiento y test,
                 #  teniendo cuidado de codificar las salidas deseadas correctamente
-                ann, = trainClassANN(topology, (trainingInputs, trainingTargets),
-                    testDataset = (testInputs,     testTargets);
+                ann, = trainClassANN(topology, (trainingInputsNorm, trainingTargets),
+                    testDataset = (testInputsNorm,     testTargets);
                     transferFunctions=transferFunctions,
                     maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate);
 
@@ -743,28 +744,16 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
         testF1Mean[numFold]          = mean(testF1EachRepetition);
         testConfusionMatrix    .+= mean(testConfusionMatrixEachRepetition, dims=3)[:,:,1];
 
-        # Calculamos la desviación estándar para cada métrica
-        testAccuracyStd[numFold]    = std(testAccuracyEachRepetition)
-        testErrorRateStd[numFold]   = std(testErrorRateEachRepetition)
-        testRecallStd[numFold]      = std(testRecallEachRepetition)
-        testSpecificityStd[numFold] = std(testSpecificityEachRepetition)
-        testPrecisionStd[numFold]   = std(testPrecisionEachRepetition)
-        testNPVStd[numFold]         = std(testNPVEachRepetition)
-        testF1Std[numFold]          = std(testF1EachRepetition)
+        
 
     end; # for numFold in 1:numFolds
 
     #return ((testAccuracyMean), (testAccuracyStd)), ((testErrorRateMean), (testErrorRateStd)), ((testRecallMean), (testRecallStd)), ((testSpecificityMean), (testSpecificityStd)), ((testPrecisionMean), (testPrecisionStd)), ((testNPVMean), (testNPVStd)), ((testF1Mean), (testF1Std)), testConfusionMatrix;
-    return ( (testAccuracyMean, testAccuracyStd),
-    (testErrorRateMean, testErrorRateStd),
-    (testRecallMean, testRecallStd),
-    (testSpecificityMean, testSpecificityStd),
-    (testPrecisionMean, testPrecisionStd),
-    (testNPVMean, testNPVStd),
-    (testF1Mean, testF1Std),
-    testConfusionMatrix )
- 
+    
 #return testAccuracyMean, testErrorRateMea, testRecall, testSpecificity, testPrecision, testNPV, testF1, testConfusionMatrix;
+    return testAccuracyMean, testErrorRateMean, testRecallMean, testSpecificityMean, testPrecisionMean, testNPVMean, testF1Mean, testConfusionMatrix
+
+
 
 end;
 

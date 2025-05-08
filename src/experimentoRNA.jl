@@ -12,6 +12,8 @@ function normalizacionANN(inputs::Matrix{<:Real})
     return normalizeMinMax(inputs)
 end
 
+#maybe non fai falta, evitar data leakage normalizando antes de particionar o dataset en entrenamiento e test, e eso e antes de crossvaliation 
+# PROBEI TAMEN a estratificada vs a normal, pretty much the same no meu caso polo menos 
 
 
 # ------------------------------------------
@@ -25,13 +27,13 @@ function ejecutarRNA()
     targets = Vector(df.Diagnosis)
 
     # 2. Normalizar entradas
-    X_norm = normalizacionANN(inputs)
+    #X_norm = normalizacionANN(inputs)
 
     # 3. Generar índices de validación cruzada estratificada
     k = 10
-    cv_indices = crossvalidation(targets, k)
+    cv_indices = CSV.read("P2/OTROS ARCHIVOS/indices_crossval2.csv", DataFrame).Fold  #Cargar indices de cv comunes
     df_indices = DataFrame(Fold = cv_indices)
-    CSV.write("P2/OTROS ARCHIVOS/indices_validacion_cruzada.csv", df_indices)
+    #~CSV.write("P2/OTROS ARCHIVOS/indices_validacion_cruzada.csv", df_indices)
 
     # Si hiciera repeticiones 3 veces vector para que cubra las repeticiones, la arquitectura y los folds
     # AccuracyMean[i][j] → fold k del experimento j para la arquitectura i.
@@ -40,18 +42,11 @@ function ejecutarRNA()
     resultados = DataFrame(
     Arquitectura = String[],
     AccuracyMean = Vector{Vector{Float64}}(),
-    AccuracyStd  = Vector{Vector{Float64}}(),
     F1Mean       = Vector{Vector{Float64}}(),
-    F1Std        = Vector{Vector{Float64}}(),
     PrecisionMean = Vector{Vector{Float64}}(),
-    PrecisionStd  = Vector{Vector{Float64}}(),
     RecallMean    = Vector{Vector{Float64}}(),
-    RecallStd     = Vector{Vector{Float64}}(),
     SpecificityMean = Vector{Vector{Float64}}(),
-    SpecificityStd = Vector{Vector{Float64}}(),
     NPVMean = Vector{Vector{Float64}}(),
-    NPVStd =Vector{Vector{Float64}}()
-
     )
 
 
@@ -76,38 +71,33 @@ function ejecutarRNA()
 
     for arch in architectures
         println("\n Evaluando arquitectura: ", arch ) 
-        (acc_mean, acc_std),
-        (_, _),  # Error rate  no se usa
-        (rec_mean, rec_std),
-        (spec_mean, spec_std),  
-        (prec_mean, prec_std),
-        (npv_mean, npv_std), 
-        (f1_mean, f1_std),
-        _ =   ANNCrossValidation(
-            arch, (X_norm, targets), cv_indices;
-                numExecutions=1,
-                maxEpochs=100,
-                learningRate=0.01,
-                validationRatio=0.1,
-                maxEpochsVal=20
-            )
-    
+        acc_mean,
+        _,
+        rec_mean,
+        spec_mean,
+        prec_mean,
+        npv_mean,
+        f1_mean,
+        _ = ANNCrossValidation(
+            arch, (inputs, targets), cv_indices;
+            numExecutions=5,
+            maxEpochs=100,
+            learningRate=0.01,
+            validationRatio=0.1,
+            maxEpochsVal=20
+        )
+
 
         push!(resultados, (
         Arquitectura = string(arch),
         AccuracyMean = acc_mean,
-        AccuracyStd  = acc_std,
-        F1Mean       = f1_mean,
-        F1Std        = f1_std,
+        F1Mean = f1_mean,
         PrecisionMean = prec_mean,
-        PrecisionStd  = prec_std,
-        RecallMean    = rec_mean,
-        RecallStd     = rec_std,
+        RecallMean = rec_mean,
         SpecificityMean = spec_mean,
-        SpecificityStd = spec_std,
-        NPVMean = npv_mean,
-        NPVStd = npv_std
-        ))
+        NPVMean = npv_mean
+    ))
+
 
     end
 

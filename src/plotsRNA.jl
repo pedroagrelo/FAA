@@ -10,15 +10,15 @@ function resumir_metricas_RNA(df::DataFrame)
         Accuracy_mean = mean.(df.AccuracyMean),
         Accuracy_std = std.(df.AccuracyMean),
         F1_mean = mean.(df.F1Mean),
-        F1_std = std.(df.F1Std),
+        F1_std = std.(df.F1Mean),
         Precision_mean = mean.(df.PrecisionMean),
-        Precision_std = std.(df.PrecisionStd),
+        Precision_std = std.(df.PrecisionMean),
         Recall_mean = mean.(df.RecallMean),
-        Recall_std = std.(df.RecallStd),
+        Recall_std = std.(df.RecallMean),
         Specificity_mean = mean.(df.SpecificityMean),
-        Specificity_std = std.(df.SpecificityStd),
+        Specificity_std = std.(df.SpecificityMean),
         NPV_mean = mean.(df.NPVMean),
-        NPV_std = std.(df.NPVStd)
+        NPV_std = std.(df.NPVMean)
     )
 end
 
