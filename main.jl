@@ -114,7 +114,7 @@ CSV.write("resultados_crossval_dome.csv", resultados_dome)
 plotsDoME.graficar_metricas_dome("resultados_crossval_dome.csv")
 
 println("\nResultados del test ANOVA DoME:")
-realizar_test_anova_DoME(resultados_dome)
+realizar_test_anova_DoME()
 
 # ------------------------------------------------------
 # Ejecutar experimento KNN
