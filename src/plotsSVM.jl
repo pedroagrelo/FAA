@@ -38,8 +38,6 @@ function parse_vector_columns!(df::DataFrame, cols::Vector{Symbol})
     return df
 end
 
-df = CSV.read(archivo_csv, DataFrame)
-parse_vector_columns!(df, [:Accuracy, :F1_Score, :Precision, :Recall, :Specificity, :VPN])
 
 # ------------------------
 # Gráficas de barras 

@@ -1,6 +1,6 @@
 module experimentoSVM
 
-using CSV, DataFrames, Random, Statistics, StatsBase, HypothesisTests
+using CSV, DataFrames, Random, Statistics, StatsBase, HypothesisTests, JSON
 include("P1_soluciones.jl")
 using LIBSVM
 
@@ -18,7 +18,7 @@ function ejecutarSVM()
     targets = Vector(df.Diagnosis)
     X_norm = normalizacionANN(inputs)
     k = 10
-    cv_indices = crossvalidation(targets, k)
+    cv_indices = CSV.read("D:/CopiaPedro/CLASE/2º/2ºcuatri/Fundamentos de Aprendizaje Automático/Práctica2aParte/FAA/P2/indices_crossval.csv", DataFrame).Fold 
 
     svm_configs = [
         Dict("kernel" => "linear", "C" => 0.1),
@@ -41,7 +41,7 @@ function ejecutarSVM()
         Accuracy = Vector{Float64}[],
         Precision = Vector{Float64}[],
         Recall = Vector{Float64}[],
-        Specifity = Vector{Float64}[],
+        Specificity = Vector{Float64}[],
         VPN = Vector{Float64}[],
         F1_Score = Vector{Float64}[],
         Tiempo = Float64[]
@@ -56,22 +56,22 @@ function ejecutarSVM()
 
         # Obtener resultados con manejo de errores
         try
-            accs, precisions, recalls, specifities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
+            accs, precisions, recalls, specificities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
 
             # Conversión garantizada a Vector{Float64}
             acc_vec = accs isa Number ? [Float64(accs) for _ in 1:k] : Float64.(accs)
             f1_vec = f1s isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(f1s)
-            prec_vec= precisions isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(precisions)
-            recall_vec = recalls isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(recalls)
-            spec_vec = specifities isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(specifities)
-            vpn_vec = vpns isa Number ? [Float64(f1s) for _ in 1:k] : Float64.(vpns)
+            prec_vec= precisions isa Number ? [Float64(precisions) for _ in 1:k] : Float64.(precisions)
+            recall_vec = recalls isa Number ? [Float64(recalls) for _ in 1:k] : Float64.(recalls)
+            spec_vec = specificities isa Number ? [Float64(specificities) for _ in 1:k] : Float64.(specificities)
+            vpn_vec = vpns isa Number ? [Float64(vpns) for _ in 1:k] : Float64.(vpns)
 
             nombre = "SVM_$(kernel)_C$(C)" *
                      (gamma !== missing ? "_gamma$(gamma)" : "") *
                      (degree !== missing ? "_degree$(degree)" : "")
 
             tiempo = @elapsed begin
-                modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
+                accs, precisions, recalls, specificities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
             end
 
             push!(resultados, (
@@ -94,11 +94,17 @@ function ejecutarSVM()
             continue
         end
     end
-
+    temp = deepcopy(resultados)
     for col in [:Accuracy, :F1_Score, :Precision, :Recall, :Specificity, :VPN]
-        resultados[!, col] = [JSON.json(v) for v in resultados[!, col]]
+        temp[!, col] = [JSON.json(v) for v in temp[!, col]]
     end
-    
+     # Mostrar los resultados en la terminal
+     println("\nResultados de cross-validation SVM:")
+     println("Configuración | Kernel | C | Gamma | Degree | Accuracy | Precision | Recall | Specificity | VPN | F1-Score | Tiempo")
+     for row in eachrow(resultados)
+         println("$(row.Configuracion) | $(row.Kernel) | $(row.C) | $(row.Gamma) | $(row.Degree) | $(mean(row.Accuracy)) | $(mean(row.Precision)) | $(mean(row.Recall)) | $(mean(row.Specificity)) | $(mean(row.VPN)) | $(mean(row.F1_Score)) | $(row.Tiempo)")
+     end
+
     CSV.write("resultados_crossval_svm.csv", resultados)
     return resultados
 end
@@ -117,7 +123,15 @@ end
 function realizar_anova(df::DataFrame, colname::Symbol = :Accuracy)
     expanded = expand_metric_column(df, colname)
     grupos = [expanded[expanded.Configuracion .== arch, :Valor] for arch in unique(expanded.Configuracion)]
-    return OneWayANOVATest(grupos...)
+    
+    # Realizar la prueba ANOVA
+    test_result = OneWayANOVATest(grupos...)
+    
+    # Imprimir los resultados del ANOVA en la terminal
+    println("\nResultados del Test ANOVA para $colname:")
+    println(test_result)
+    
+    return test_result
 end
 
 end
