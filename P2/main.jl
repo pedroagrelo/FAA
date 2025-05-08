@@ -13,7 +13,6 @@ using preprocesamiento  # Tu módulo con funciones de preprocesado
 using experimentoRNA #módulo con funcion de experimento y test de  hipótesis RNA
 using plotsRNA #módulo con funciones de resumen y graficando
 
-
 println("Iniciando el preprocesamiento...")
 
 # 2. Paso 1: Calcular correlaciones (para selección de variables visual)
@@ -35,6 +34,14 @@ balancear_dataset(
 analizar_outliers("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv")
 
 println("Preprocesamiento finalizado.")
+
+
+#Creamos indices de cross validation comunes
+include("../src/generar_indices.jl")
+using .indicesCrossval
+
+println("Generando índices de validación cruzada...")
+indicesCrossval.generar_indices()
 
 # 6. Ejecutar experimento de RNA con validación cruzada
 println("Ejecutando experimentos con RNA...")

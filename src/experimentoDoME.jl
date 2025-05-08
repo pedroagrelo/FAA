@@ -1,6 +1,5 @@
 using CSV, DataFrames
 include("P1_soluciones.jl")
-
 export ejecutar_dome
 export realizar_test_anova_DoME
 
@@ -15,7 +14,7 @@ function ejecutar_dome()
     # 4. Convertir las etiquetas a strings para DoME
     targets = string.(targets)
 
-
+    
     # Cargar índices de validación cruzada
     indicesCV = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval.csv", DataFrame).Fold
 
