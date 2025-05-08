@@ -20,7 +20,7 @@ end
 function ejecutarRNA()
 
     # 1. Leer dataset limpio
-    df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
+    df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
 
@@ -31,7 +31,7 @@ function ejecutarRNA()
     k = 10
     cv_indices = crossvalidation(targets, k)
     df_indices = DataFrame(Fold = cv_indices)
-    CSV.write("P2/OTROS ARCHIVOS/indices_validacion_cruzada.csv", df_indices)
+    CSV.write("P2/OTROS_ARCHIVOS/indices_validacion_cruzada.csv", df_indices)
 
     # Si hiciera repeticiones 3 veces vector para que cubra las repeticiones, la arquitectura y los folds
     # AccuracyMean[i][j] → fold k del experimento j para la arquitectura i.

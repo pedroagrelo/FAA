@@ -13,12 +13,12 @@ function normalizacionANN(inputs::Matrix{<:Real})
 end
 
 function ejecutarSVM()
-    df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
+    df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
     X_norm = normalizacionANN(inputs)
     k = 10
-    cv_indices = CSV.read("P2/OTROS ARCHIVOS/indices_crossval.csv", DataFrame).Fold 
+    cv_indices = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval.csv", DataFrame).Fold 
 
     svm_configs = [
         Dict("kernel" => "linear", "C" => 0.1),
