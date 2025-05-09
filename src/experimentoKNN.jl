@@ -84,9 +84,9 @@ function ejecutar_knn()
     end
 
     # 6. Guardar resultados en CSV
-    CSV.write("P2/RESULTADOS/resultados_crossval_knn.csv", resultados_knn)
+    CSV.write("P2/RESULTADOS/resumen_resultados_crossval_knn.csv", resultados_knn)
     println("Resultados guardados en 'resultados_crossval_knn.csv'")
-    CSV.write("P2/RESULTADOS/resultados_folds_knn.csv", resultados_fold_knn)
+    CSV.write("P2/RESULTADOS/resultados_crossval_knn.csv", resultados_fold_knn)
     println("También guardado 'resultados_folds_knn.csv' con métricas por fold.")
 return resultados_knn
 end
