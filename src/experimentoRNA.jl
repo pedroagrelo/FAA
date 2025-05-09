@@ -17,7 +17,7 @@ function ejecutarRNA()
 
     # Generar índices de validación cruzada estratificada
 
-    cv_indices = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval2.csv", DataFrame).Fold  #Cargar indices de cv comunes
+    cv_indices = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval.csv", DataFrame).Fold  #Cargar indices de cv comunes
 
     # Creamos
     # Como solo hacemos una repeticion me vale con el 2 vector, arquitecra y folds 
