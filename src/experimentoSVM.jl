@@ -1,6 +1,6 @@
 module experimentoSVM
 
-using CSV, DataFrames, Random, Statistics, StatsBase, HypothesisTests, JSON
+using CSV, DataFrames, Random, Statistics, StatsBase, HypothesisTests, JSON, Distributions
 include("P1_soluciones.jl")
 using LIBSVM
 
@@ -116,18 +116,50 @@ function expand_metric_column(df::DataFrame, colname::Symbol)
     return expanded_data
 end
 
+#Test ANOVA + Tukey
 function realizar_anova(df::DataFrame, colname::Symbol = :Accuracy)
     expanded = expand_metric_column(df, colname)
     grupos = [expanded[expanded.Configuracion .== arch, :Valor] for arch in unique(expanded.Configuracion)]
-    
     # Realizar la prueba ANOVA
-    test_result = OneWayANOVATest(grupos...)
+    anova_result = OneWayANOVATest(grupos...)
     
     # Imprimir los resultados del ANOVA en la terminal
     println("\nResultados del Test ANOVA para $colname:")
-    println(test_result)
-    
-    return test_result
+    println(anova_result)
+
+    if pvalue(anova_result) < 0.05
+        println("-> Se rechaza H₀ con un p-valor de $(round(pvalue(anova_result), digits=4)). Se realizarán comparaciones múltiples.")
+        realizar_tukey_hsd(df, colname)
+    else
+        println("→ No se rechaza H₀. No se hacen comparaciones múltiples.")
+    end
 end
 
+function realizar_tukey_hsd(df::DataFrame, colname::Symbol = :Accuracy)
+    println("\nComparaciones múltiples tipo Tukey HSD:")
+    expanded = expand_metric_column(df, colname)
+    grupos = unique(expanded.Configuracion)
+    α = 0.05
+
+    for i = 1:length(grupos)-1
+        for j = i+1:length(grupos)
+            g1, g2 = grupos[i], grupos[j]
+            vals1 = expanded[expanded.Configuracion .== g1, :Valor]
+            vals2 = expanded[expanded.Configuracion .== g2, :Valor]
+
+            diff = mean(vals1) - mean(vals2)
+            pooled_var = (var(vals1) + var(vals2)) / 2
+            se = sqrt(pooled_var * (1/length(vals1) + 1/length(vals2)))
+            t_stat = abs(diff) / se
+
+            dfree = length(vals1) + length(vals2) - 2
+            critical_t = quantile(TDist(dfree), 1 - α/2)
+            significant = t_stat > critical_t
+            resultado = significant ? "DIFERENCIA SIGNIFICATIVA" : "sin diferencia"
+
+            println("Comparación $g1 vs $g2: t = $(round(t_stat, digits=3)) (umbral = $(round(critical_t, digits=3))) → $resultado")
+        end
+    end
 end
+
+end  # module
