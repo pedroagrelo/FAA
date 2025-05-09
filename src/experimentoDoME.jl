@@ -115,7 +115,7 @@ function realizar_test_anova_DoME()
 
     # Agrupar los valores de accuracy por número de nodos
     # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
-    df = CSV.read("resultados_folds_dome.csv", DataFrame)
+    df = CSV.read("P2/RESULTADOS/resultados_folds_dome.csv", DataFrame)
 
     # Crear listas de grupos (una lista por cada valor de MaxNodes)
     grupos_accuracy = [df[df.MaxNodes .== n, :Accuracy] for n in unique(df.MaxNodes)]
@@ -139,7 +139,7 @@ function realizar_test_tukey_dome()
     println("\nComparación múltiple tipo Tukey (DoME):")
 
     # 1. Leer archivo con datos por fold
-    df = CSV.read("resultados_folds_dome.csv", DataFrame)
+    df = CSV.read("P2/RESULTADOS/resultados_folds_dome.csv", DataFrame)
 
     # 2. Agrupar por configuración (MaxNodes)
     grouped = combine(groupby(df, :MaxNodes),
@@ -157,12 +157,31 @@ function realizar_test_tukey_dome()
     end
 
     # 4. Comparaciones entre todos los pares de configuraciones
+    significativas = Set{Tuple{Int, Int}}()
     for (a, b) in combinations(eachrow(grouped), 2)
         if diferencia_significativa(a, b)
             println("MaxNodes = $(a.MaxNodes) vs $(b.MaxNodes): diferencia significativa")
+            push!(significativas, (a.MaxNodes, b.MaxNodes))
+            push!(significativas, (b.MaxNodes, a.MaxNodes))
         else
             println("MaxNodes = $(a.MaxNodes) vs $(b.MaxNodes): NO significativa")
         end
     end
+        # 5. Identificar las mejores configuraciones
+    # Ordenar por media descendente
+    sorted = sort(grouped, :mean, rev = true)
+    mejor = sorted[1, :MaxNodes]
+
+    # Seleccionar aquellas que no tienen diferencias significativas con ninguna mejor
+    mejores = [mejor]
+    for i in 2:size(sorted, 1)
+        nodo = sorted[i, :MaxNodes]
+        if !((nodo, mejor) in significativas)
+            push!(mejores, nodo)
+        end
+    end
+
+    println("\nConfiguraciones recomendadas (sin diferencias significativas con las mejores):")
+    println("→ MaxNodes = ", sort(mejores))
 end
 end

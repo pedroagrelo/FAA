@@ -16,22 +16,22 @@ using .plotsRNA #módulo con funciones de resumen y graficando
 println("Iniciando el preprocesamiento...")
 
 # 2. Paso 1: Calcular correlaciones (para selección de variables visual)
-calcular_correlaciones("P2/OTROS_ARCHIVOS/alzheimers_disease_data.csv", "P2/IMÁGENES/correlacion_con_diagnosis.png")
+preprocesamiento.calcular_correlaciones("P2/OTROS_ARCHIVOS/alzheimers_disease_data.csv", "P2/IMÁGENES/correlacion_con_diagnosis.png")
 
 # 3. Paso 2: Filtrar el dataset con columnas seleccionadas
-filtrar_dataset(
+preprocesamiento.filtrar_dataset(
     "P2/OTROS_ARCHIVOS/alzheimers_disease_data.csv",
     "P2/OTROS_ARCHIVOS/alzheimers_limpio.csv"
 )
 
 # 4. Paso 3: Aplicar balanceo por subsampling
-balancear_dataset(
+preprocesamiento.balancear_dataset(
     "P2/OTROS_ARCHIVOS/alzheimers_limpio.csv",
     "P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv"
 )
 
 # 5. Paso 4: Revisar si hay outliers (mensaje informativo)
-analizar_outliers("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv")
+preprocesamiento.analizar_outliers("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv")
 
 println("Preprocesamiento finalizado.")
 

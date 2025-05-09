@@ -84,9 +84,9 @@ function ejecutar_knn()
     end
 
     # 6. Guardar resultados en CSV
-    CSV.write("resultados_crossval_knn.csv", resultados_knn)
+    CSV.write("P2/RESULTADOS/resultados_crossval_knn.csv", resultados_knn)
     println("Resultados guardados en 'resultados_crossval_knn.csv'")
-    CSV.write("resultados_folds_knn.csv", resultados_fold_knn)
+    CSV.write("P2/RESULTADOS/resultados_folds_knn.csv", resultados_fold_knn)
     println("También guardado 'resultados_folds_knn.csv' con métricas por fold.")
 return resultados_knn
 end
@@ -98,7 +98,7 @@ function realizar_test_anova_knn()
 
     # Agrupar los valores de accuracy por número de nodos
     # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
-    df = CSV.read("resultados_folds_knn.csv", DataFrame)
+    df = CSV.read("P2/RESULTADOS/resultados_folds_knn.csv", DataFrame)
 
     # Agrupar accuracies por valor de K
     grouped = groupby(df, :K)
@@ -123,7 +123,7 @@ function realizar_test_tukey_knn()
     println("\nComparación múltiple tipo Tukey (KNN):")
 
     # 1. Leer resultados por fold
-    df = CSV.read("resultados_folds_knn.csv", DataFrame)
+    df = CSV.read("P2/RESULTADOS/resultados_folds_knn.csv", DataFrame)
 
     # 2. Agrupar por K
     grouped = combine(groupby(df, :K),
@@ -141,12 +141,29 @@ function realizar_test_tukey_knn()
     end
 
     # 4. Comparar todos los pares de configuraciones
+    significativas = Set{Tuple{Int, Int}}()
     for (a, b) in combinations(eachrow(grouped), 2)
         if diferencia_significativa(a, b)
             println("K = $(a.K) vs $(b.K): diferencia significativa")
+            push!(significativas, (a.K, b.K))
+            push!(significativas, (b.K, a.K))
         else
             println("K = $(a.K) vs $(b.K): NO significativa")
         end
     end
+    # 5. Identificar configuraciones equivalentes a la mejor
+    sorted = sort(grouped, :mean, rev = true)
+    mejor = sorted[1, :K]
+
+    mejores = [mejor]
+    for i in 2:size(sorted, 1)
+        k = sorted[i, :K]
+        if !((k, mejor) in significativas)
+            push!(mejores, k)
+        end
+    end
+    
+    println("\nConfiguraciones recomendadas (equivalentes estadísticamente a la mejor):")
+    println("→ K = ", sort(mejores))
 end
 end #module
