@@ -101,8 +101,8 @@ function ejecutar_dome()
     end
 
     #Guardar CSVs
-    CSV.write("P2/RESULTADOS/resumen_resultados_crossval_dome.csv", resultados_dome)
-    CSV.write("P2/RESULTADOS/resultados_crossval_dome.csv", resultados_fold)
+    CSV.write("P2/RESULTADOS/resultados_crossval_dome.csv", resultados_dome)
+    CSV.write("P2/RESULTADOS/resultados_folds_dome.csv", resultados_fold)
     println("Archivos guardados: resumen y fold a fold.")
 return resultados_dome
 end
@@ -115,7 +115,7 @@ function realizar_test_anova_DoME()
 
     # Agrupar los valores de accuracy por número de nodos
     # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
-    df = CSV.read("P2/RESULTADOS/resultados_crossval_dome.csv", DataFrame)
+    df = CSV.read("P2/RESULTADOS/resultados_folds_dome.csv", DataFrame)
 
     # Crear listas de grupos (una lista por cada valor de MaxNodes)
     grupos_accuracy = [df[df.MaxNodes .== n, :Accuracy] for n in unique(df.MaxNodes)]
@@ -139,7 +139,7 @@ function realizar_test_tukey_dome()
     println("\nComparación múltiple tipo Tukey (DoME):")
 
     # 1. Leer archivo con datos por fold
-    df = CSV.read("P2/RESULTADOS/resultados_crossval_dome.csv", DataFrame)
+    df = CSV.read("P2/RESULTADOS/resultados_folds_dome.csv", DataFrame)
 
     # 2. Agrupar por configuración (MaxNodes)
     grouped = combine(groupby(df, :MaxNodes),

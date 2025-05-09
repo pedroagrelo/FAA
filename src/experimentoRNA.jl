@@ -21,10 +21,10 @@ function ejecutarRNA()
 
     # Creamos
     # Como solo hacemos una repeticion me vale con el 2 vector, arquitecra y folds 
-    # Accuracy[i] → 10 valores de accuracy para la arquitectura i.
+    # AccuracyMean[i] → 10 valores de accuracy para la arquitectura i.
     resultados = DataFrame(
     Arquitectura = String[],
-    Accuracy = Vector{Vector{Float64}}(),
+    AccuracyMean = Vector{Vector{Float64}}(),
     F1Mean       = Vector{Vector{Float64}}(),
     PrecisionMean = Vector{Vector{Float64}}(),
     RecallMean    = Vector{Vector{Float64}}(),
@@ -69,7 +69,7 @@ function ejecutarRNA()
 
         push!(resultados, (
         Arquitectura = string(arch),
-        Accuracy = acc_mean,
+        AccuracyMean = acc_mean,
         F1Mean = f1_mean,
         PrecisionMean = prec_mean,
         RecallMean = rec_mean,
@@ -104,7 +104,7 @@ function expand_metric_column(df::DataFrame, colname::Symbol)
     return expanded_data
 end
 
-function realizar_anova(df::DataFrame, colname::Symbol = :Accuracy)
+function realizar_anova(df::DataFrame, colname::Symbol = :AccuracyMean)
     # Expandir los datos por fold
     expanded = expand_metric_column(df, colname)
 

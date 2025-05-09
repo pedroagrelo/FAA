@@ -122,7 +122,7 @@ using .experimentoDoME
 
 println("Ejecutando experimento DoME y generando gráficas...")
 resultados_dome = ejecutar_dome()
-CSV.write("resultados_crossval_dome.csv", resultados_dome)
+CSV.write("P2/RESULTADOS/resultados_crossval_dome.csv", resultados_dome)
 plotsDoME.graficar_metricas_dome("resultados_crossval_dome.csv")
 
 println("\nResultados del test ANOVA DoME:")
@@ -141,7 +141,7 @@ using .plotsKNN
 
 println("Ejecutando experimento KNN y generando gráficas...")
 resultados_knn = experimentoKNN.ejecutar_knn()
-CSV.write("resultados_crossval_knn.csv", resultados_knn)
+CSV.write("P2/RESULTADOS/resultados_crossval_knn.csv", resultados_knn)
 plotsKNN.graficar_metricas_knn("resultados_crossval_knn.csv")
 
 println("\nResultados del test ANOVA KNN:")
@@ -149,3 +149,14 @@ experimentoKNN.realizar_test_anova_knn()
 
 println("\n Ejecutando test de Tukey KNN...")   
 experimentoKNN.realizar_test_tukey_knn()
+
+
+# ------------------------------------------------------
+# Comparación final de modelos (ANOVA y Tukey)
+# ------------------------------------------------------
+include("../src/comparacion_modelos.jl")
+
+
+println("\nResultados de la comparación entre modelos:")
+# 2. Ejecutar la comparación de los modelos (ANOVA, Tukey y mejor modelo)
+comparacion_modelos.ejecutar_experimentos()
