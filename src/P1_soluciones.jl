@@ -814,70 +814,66 @@ function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dat
     testF1              = Array{Float64,1}(undef, numFolds);
     # testConfusionMatrix = Array{Float64,3}(undef, length(classes), length(classes), numFolds);
     testConfusionMatrix = zeros(Int, length(classes), length(classes));
-
-    # Para cada fold, entrenamos
     for numFold in 1:numFolds
 
-        # Dividimos los datos en entrenamiento y test
-        trainingInputs    = inputs[crossValidationIndices.!=numFold,:];
-        testInputs        = inputs[crossValidationIndices.==numFold,:];
-        trainingTargets   = targets[crossValidationIndices.!=numFold];
-        testTargets       = targets[crossValidationIndices.==numFold];
+        # Dividimos los datos en entrenamiento y test (sin normalizar aún)
+        trainingInputs_raw = inputs[crossValidationIndices .!= numFold, :]
+        testInputs_raw     = inputs[crossValidationIndices .== numFold, :]
+        trainingTargets    = targets[crossValidationIndices .!= numFold]
+        testTargets        = targets[crossValidationIndices .== numFold]
 
-        # Creamos el modelo según lo que nos hayan pasado como parámetro
-        if modelType==:DoME
+        # Normalizamos con parámetros del conjunto de entrenamiento
+        mins = mapslices(minimum, trainingInputs_raw; dims=1)
+        maxs = mapslices(maximum, trainingInputs_raw; dims=1)
+        range = maxs .- mins .+ eps()  # evitar división por cero
 
-            testOutputs = trainClassDoME((trainingInputs, trainingTargets), testInputs, modelHyperparameters["maximumNodes"]);
+        trainingInputs = (trainingInputs_raw .- mins) ./ range
+        testInputs     = (testInputs_raw .- mins) ./ range
 
+        # Creamos el modelo
+        if modelType == :DoME
+            testOutputs = trainClassDoME((trainingInputs, trainingTargets), testInputs, modelHyperparameters["maximumNodes"])
         else
-
-            if modelType==:SVC
-                @assert((modelHyperparameters["kernel"] == "linear") || (modelHyperparameters["kernel"] == "poly") || (modelHyperparameters["kernel"] == "rbf") || (modelHyperparameters["kernel"] == "sigmoid"));
+            if modelType == :SVC
+                @assert((modelHyperparameters["kernel"] == "linear") || (modelHyperparameters["kernel"] == "poly") || (modelHyperparameters["kernel"] == "rbf") || (modelHyperparameters["kernel"] == "sigmoid"))
                 model = SVMClassifier(
                     kernel = 
-                        modelHyperparameters["kernel"]=="linear"  ? LIBSVM.Kernel.Linear :
-                        modelHyperparameters["kernel"]=="rbf"     ? LIBSVM.Kernel.RadialBasis :
-                        modelHyperparameters["kernel"]=="poly"    ? LIBSVM.Kernel.Polynomial :
-                        modelHyperparameters["kernel"]=="sigmoid" ? LIBSVM.Kernel.Sigmoid : nothing,
+                        modelHyperparameters["kernel"] == "linear"  ? LIBSVM.Kernel.Linear :
+                        modelHyperparameters["kernel"] == "rbf"     ? LIBSVM.Kernel.RadialBasis :
+                        modelHyperparameters["kernel"] == "poly"    ? LIBSVM.Kernel.Polynomial :
+                        modelHyperparameters["kernel"] == "sigmoid" ? LIBSVM.Kernel.Sigmoid : nothing,
                     cost   = Float64(modelHyperparameters["C"]),
                     gamma  = Float64(get(modelHyperparameters, "gamma",  -1)),
                     degree = Int32(  get(modelHyperparameters, "degree", -1)),
-                    coef0  = Float64(get(modelHyperparameters, "coef0",  -1)));
-                # Cuidado con los tipos de los argumentos cost, gamma, degree y coef0, tienen que ser esos. No vale, por ejemplo, que degree sea Int, tiene que ser Int32
-
-            elseif modelType==:DecisionTreeClassifier
-                model = DTClassifier(max_depth = modelHyperparameters["max_depth"], rng=Random.MersenneTwister(1));
-            elseif modelType==:KNeighborsClassifier
-                model = kNNClassifier(K = modelHyperparameters["n_neighbors"]);
+                    coef0  = Float64(get(modelHyperparameters, "coef0",  -1))
+                )
+            elseif modelType == :DecisionTreeClassifier
+                model = DTClassifier(max_depth = modelHyperparameters["max_depth"], rng=Random.MersenneTwister(1))
+            elseif modelType == :KNeighborsClassifier
+                model = kNNClassifier(K = modelHyperparameters["n_neighbors"])
             else
-                error(string("Unknown model ", modelType));
-            end;
+                error(string("Unknown model ", modelType))
+            end
 
-            # Creamos el objeto de tipo Machine
-            mach = machine(model, MLJ.table(trainingInputs), categorical(trainingTargets));
-
-            # Entrenamos el modelo con el conjunto de entrenamiento
+            mach = machine(model, MLJ.table(trainingInputs), categorical(trainingTargets))
             MLJ.fit!(mach, verbosity=0)
-
-            # Pasamos el conjunto de test
             testOutputs = MLJ.predict(mach, MLJ.table(testInputs))
-            # if modelType==:DecisionTreeClassifier || modelType==:KNeighborsClassifier
-            if modelType!=:SVC
+            if modelType != :SVC
                 testOutputs = mode.(testOutputs)
-            end;
-            # testOutputs = string.(testOutputs);
+            end
+        end
 
-        end;
+        # Evaluación
+        (testAccuracy[numFold], testErrorRate[numFold], testRecall[numFold], testSpecificity[numFold],
+        testPrecision[numFold], testNPV[numFold], testF1[numFold], testConfusionMatrixThisFold) =
+            confusionMatrix(testOutputs, testTargets, classes)
 
-        # Calculamos las metricas y las almacenamos en las posiciones de este fold de cada vector
-        (testAccuracy[numFold], testErrorRate[numFold], testRecall[numFold], testSpecificity[numFold], testPrecision[numFold], testNPV[numFold], testF1[numFold], testConfusionMatrixThisFold) =
-            confusionMatrix(testOutputs, testTargets, classes);
+        @assert isapprox(testAccuracy[numFold],
+            sum([testConfusionMatrixThisFold[numClass, numClass] for numClass in 1:length(classes)]) / sum(testConfusionMatrixThisFold))
 
-        @assert( isapprox( testAccuracy[numFold], sum([testConfusionMatrixThisFold[numClass,numClass] for numClass in 1:length(classes)])/sum(testConfusionMatrixThisFold) ) );
-
-        testConfusionMatrix .+= testConfusionMatrixThisFold;
-
-    end; # for numFold in 1:numFolds
+        testConfusionMatrix .+= testConfusionMatrixThisFold
+    end
+    # for numFold in 1:numFolds
 
     return testAccuracy, testErrorRate, testRecall, testSpecificity, testPrecision, testNPV, testF1, testConfusionMatrix
 
