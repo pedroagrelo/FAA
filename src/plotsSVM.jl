@@ -8,24 +8,33 @@ export resumir_metricas_svm, graficar_metricas_svm
 # Resumen estadístico para gráficas de SVM
 # -----------------------------------------------
 function resumir_metricas_svm(df::DataFrame)
+    # Parsear las columnas JSON a vectores numéricos
+    metric_cols = [:Accuracy, :F1_Score, :Precision, :Recall, :Specificity, :VPN]
+    for col in metric_cols
+        if typeof(df[1, col]) == String  # Si es una cadena JSON, parsearla
+            df[!, col] = [JSON.parse(v) for v in df[!, col]]
+        end
+    end
+
+    # Agrupar y resumir
     grouped = groupby(df, :Configuracion)
     return combine(grouped, 
         :Kernel => first => :kernel,
-        :C => first,
-        :Gamma => first,
-        :Degree => first,
-        :Accuracy => mean => :Accuracy_mean,
-        :Accuracy => std => :Accuracy_std,
-        :F1_Score => mean => :F1_mean,
-        :F1_Score => std => :F1_std,
-        :Precision => mean => :Precision_mean,
-        :Precision => std => :Precision_std,
-        :Recall => mean => :Recall_mean,
-        :Recall => std => :Recall_std,
-        :Specificity => mean => :Specificity_mean,
-        :Specificity => std => :Specificity_std,
-        :VPN => mean => :VPN_mean,
-        :VPN => std => :VPN_std,
+        :C => first => :C,
+        :Gamma => first => :Gamma,
+        :Degree => first => :Degree,
+        :Accuracy => (x -> mean(vcat(x...))) => :Accuracy_mean,
+        :Accuracy => (x -> std(vcat(x...))) => :Accuracy_std,
+        :F1_Score => (x -> mean(vcat(x...))) => :F1_mean,
+        :F1_Score => (x -> std(vcat(x...))) => :F1_std,
+        :Precision => (x -> mean(vcat(x...))) => :Precision_mean,
+        :Precision => (x -> std(vcat(x...))) => :Precision_std,
+        :Recall => (x -> mean(vcat(x...))) => :Recall_mean,
+        :Recall => (x -> std(vcat(x...))) => :Recall_std,
+        :Specificity => (x -> mean(vcat(x...))) => :Specificity_mean,
+        :Specificity => (x -> std(vcat(x...))) => :Specificity_std,
+        :VPN => (x -> mean(vcat(x...))) => :VPN_mean,
+        :VPN => (x -> std(vcat(x...))) => :VPN_std,
         :Tiempo => mean => :Tiempo
     )
 end

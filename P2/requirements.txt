@@ -1,0 +1,13 @@
+En este archivo, se explica cómo ejecutar el proyecto en Julia para que funcione correctamente.
+
+1. Requisitos previos:
+Se requiere la versión de julia 1.11 instalada en el sistema debido a compatibilidades específicas de paquetes.
+
+2. Instalar paquetes:
+Desde el prompot de julia, entrar al modo Package Manager precionando la tecla ] y el prompt cambiará a pkg>
+Copiar y pegar lo siguiente para que se instalen los paquetes secuencialmente:
+add CSV LIBSVM DataFrames MLJ MLJLinearModels StatsBase Distributions JSON Plots Statistics StatsPlots Random Combinatorics DecisionTree
+
+3. Ejecutar el archivo principal
+Una vez instalados los paquetes, ejecutar el programa completo con el archivo "main.jl".
+Esto lanzará el flujo completo de experimentación.
