@@ -1,12 +1,10 @@
-module experimentoDoME
 using CSV, DataFrames
 include("P1_soluciones.jl")
-data = CSV.read("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
-
 export ejecutar_dome
+export realizar_test_anova_DoME
 
 function ejecutar_dome()
-    data = CSV.read("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
+    data = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
 
     # 2. Extraer entradas (X) y salida (y), y normalizar las entradas 
     inputs = Matrix(data[:, Not("Diagnosis")])
@@ -16,9 +14,9 @@ function ejecutar_dome()
     # 4. Convertir las etiquetas a strings para DoME
     targets = string.(targets)
 
-
+    
     # Cargar índices de validación cruzada
-    indicesCV = CSV.read("P2/OTROS ARCHIVOS/indices_crossval.csv", DataFrame).Fold
+    indicesCV = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval.csv", DataFrame).Fold
 
     # -------------------------------
     # 6. Valores de nodos a probar
@@ -101,35 +99,36 @@ function ejecutar_dome()
     end
 
     #Guardar CSVs
-    CSV.write("P2/RESULTADOS/resultados_crossval_dome.csv", resultados_dome)
-    CSV.write("P2/RESULTADOS/resultados_folds_dome.csv", resultados_fold)
+    CSV.write("resultados_crossval_dome.csv", resultados_dome)
+    CSV.write("resultados_folds_dome.csv", resultados_fold)
     println("Archivos guardados: resumen y fold a fold.")
-
-    return resultados_dome    
-end
+return resultados_dome
 end
 
-# using HypothesisTests, Statistics
+using HypothesisTests, Statistics
 
-# println("\nTest ANOVA sobre Accuracy (por MaxNodes):")
+function realizar_test_anova_DoME()
+    
+    println("\nTest ANOVA sobre Accuracy (por MaxNodes):")
 
-# # Agrupar los valores de accuracy por número de nodos
-# # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
-# df = CSV.read("resultados_folds_dome.csv", DataFrame)
+    # Agrupar los valores de accuracy por número de nodos
+    # Vamos a leer el CSV recién guardado (por si se usa de forma modular)
+    df = CSV.read("resultados_folds_dome.csv", DataFrame)
 
-# # Crear listas de grupos (una lista por cada valor de MaxNodes)
-# grupos_accuracy = [df[df.MaxNodes .== n, :AccuracyMean] for n in unique(df.MaxNodes)]
+    # Crear listas de grupos (una lista por cada valor de MaxNodes)
+    grupos_accuracy = [df[df.MaxNodes .== n, :Accuracy] for n in unique(df.MaxNodes)]
 
-# # Aplicar test ANOVA con splatting (...) para pasar los grupos como argumentos
-# anova_test = OneWayANOVATest(grupos_accuracy...)
-# p_valor = pvalue(anova_test)
+    # Aplicar test ANOVA con splatting (...) para pasar los grupos como argumentos
+    anova_test = OneWayANOVATest(grupos_accuracy...)
+    p_valor = pvalue(anova_test)
 
-# println("p-value: ", p_valor)
-# println("Grados de libertad (entre grupos): ", anova_test.DFt)
-# println("Grados de libertad (dentro de grupos): ", anova_test.DFe)
+    println("p-value: ", p_valor)
+    println("Grados de libertad (entre grupos): ", anova_test.DFt)
+    println("Grados de libertad (dentro de grupos): ", anova_test.DFe)
 
-# if p_valor < 0.05
-#     println("Rechazamos la hipótesis nula: hay diferencias significativas entre las precisiones.")
-# else
-#     println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
-# end
+    if p_valor < 0.05
+        println("Rechazamos la hipótesis nula: hay diferencias significativas entre las precisiones.")
+    else
+        println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
+    end
+end

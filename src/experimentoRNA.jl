@@ -22,7 +22,7 @@ end
 function ejecutarRNA()
 
     # 1. Leer dataset limpio
-    df = CSV.read("P2/OTROS ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
+    df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
 
