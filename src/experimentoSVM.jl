@@ -6,18 +6,12 @@ using LIBSVM
 
 export ejecutarSVM, realizar_anova
 
-# function normalizacionANN(inputs::Matrix{<:Real})
-#     min_vals = minimum(inputs, dims=1)
-#     max_vals = maximum(inputs, dims=1)
-#     return 2 * ((inputs .- min_vals) ./ (max_vals .- min_vals)) .- 1
-# end
-
 function ejecutarSVM()
+    #Carga de datos
     df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
-    X_norm = normalizeZeroMean(inputs) #Normalizacion z-score
-
+    
     k = 10
     cv_indices = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval.csv", DataFrame).Fold 
 
