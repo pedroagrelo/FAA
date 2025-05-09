@@ -1,5 +1,7 @@
-using CSV, DataFrames
+module experimentoDoME
+using CSV, DataFrames, Combinatorics
 include("P1_soluciones.jl")
+export realizar_test_tukey_dome
 export ejecutar_dome
 export realizar_test_anova_DoME
 
@@ -99,8 +101,8 @@ function ejecutar_dome()
     end
 
     #Guardar CSVs
-    CSV.write("resultados_crossval_dome.csv", resultados_dome)
-    CSV.write("resultados_folds_dome.csv", resultados_fold)
+    CSV.write("P2/RESULTADOS/resultados_crossval_dome.csv", resultados_dome)
+    CSV.write("P2/RESULTADOS/resultados_folds_dome.csv", resultados_fold)
     println("Archivos guardados: resumen y fold a fold.")
 return resultados_dome
 end
@@ -131,4 +133,36 @@ function realizar_test_anova_DoME()
     else
         println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
     end
+end
+
+function realizar_test_tukey_dome()
+    println("\nComparación múltiple tipo Tukey (DoME):")
+
+    # 1. Leer archivo con datos por fold
+    df = CSV.read("resultados_folds_dome.csv", DataFrame)
+
+    # 2. Agrupar por configuración (MaxNodes)
+    grouped = combine(groupby(df, :MaxNodes),
+        :Accuracy => mean => :mean,
+        :Accuracy => std => :std,
+        :Accuracy => length => :n
+    )
+
+    # 3. Función de diferencia significativa
+    function diferencia_significativa(x, y, alpha = 0.05)
+        d = abs(x.mean - y.mean)
+        se = sqrt(x.std^2 / x.n + y.std^2 / y.n)
+        t = 2.0  # Aprox. para 95% de confianza
+        return d > t * se
+    end
+
+    # 4. Comparaciones entre todos los pares de configuraciones
+    for (a, b) in combinations(eachrow(grouped), 2)
+        if diferencia_significativa(a, b)
+            println("MaxNodes = $(a.MaxNodes) vs $(b.MaxNodes): diferencia significativa")
+        else
+            println("MaxNodes = $(a.MaxNodes) vs $(b.MaxNodes): NO significativa")
+        end
+    end
+end
 end

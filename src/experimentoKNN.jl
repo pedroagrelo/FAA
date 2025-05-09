@@ -1,8 +1,10 @@
-using CSV, DataFrames, Statistics
+module experimentoKNN
+using CSV, DataFrames, Statistics, Combinatorics
 include("P1_soluciones.jl")
 
 export ejecutar_knn
 export realizar_test_anova_knn
+export realizar_test_tukey_knn
 
 function ejecutar_knn()
         
@@ -116,3 +118,35 @@ function realizar_test_anova_knn()
         println("No se rechaza la hipótesis nula: no hay diferencias significativas.")
     end
 end
+
+function realizar_test_tukey_knn()
+    println("\nComparación múltiple tipo Tukey (KNN):")
+
+    # 1. Leer resultados por fold
+    df = CSV.read("resultados_folds_knn.csv", DataFrame)
+
+    # 2. Agrupar por K
+    grouped = combine(groupby(df, :K),
+        :Accuracy => mean => :mean,
+        :Accuracy => std => :std,
+        :Accuracy => length => :n
+    )
+
+    # 3. Función para diferencia significativa
+    function diferencia_significativa(x, y, alpha = 0.05)
+        d = abs(x.mean - y.mean)
+        se = sqrt(x.std^2 / x.n + y.std^2 / y.n)
+        t = 2.0  # Aprox. 95% confianza
+        return d > t * se
+    end
+
+    # 4. Comparar todos los pares de configuraciones
+    for (a, b) in combinations(eachrow(grouped), 2)
+        if diferencia_significativa(a, b)
+            println("K = $(a.K) vs $(b.K): diferencia significativa")
+        else
+            println("K = $(a.K) vs $(b.K): NO significativa")
+        end
+    end
+end
+end #module
