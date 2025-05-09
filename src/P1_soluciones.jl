@@ -666,22 +666,23 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
     testF1Mean          = Array{Float64,1}(undef, numFolds);
     testConfusionMatrix = zeros(length(classes), length(classes));
 
-    testAccuracyStd     = Array{Float64,1}(undef, numFolds)
-    testErrorRateStd    = Array{Float64,1}(undef, numFolds)
-    testRecallStd       = Array{Float64,1}(undef, numFolds)
-    testSpecificityStd  = Array{Float64,1}(undef, numFolds)
-    testPrecisionStd    = Array{Float64,1}(undef, numFolds)
-    testNPVStd          = Array{Float64,1}(undef, numFolds)
-    testF1Std           = Array{Float64,1}(undef, numFolds)
 
     # Para cada fold, entrenamos
     for numFold in 1:numFolds
 
         # Dividimos los datos en entrenamiento y test
         trainingInputs    = inputs[crossValidationIndices.!=numFold,:];
-        testInputs        = inputs[crossValidationIndices.==numFold,:];
+        testInputs        = inputs[crossValidationIndices.==numFold,:]; 
         trainingTargets   = targets[crossValidationIndices.!=numFold,:];
         testTargets       = targets[crossValidationIndices.==numFold,:];
+
+         # Calcular los parámetros de normalización usando solo los datos de entrenamiento
+        normalizationParams = calculateMinMaxNormalizationParameters(trainingInputs)
+
+        # Normalizamos los conjuntos de entrenamiento y prueba
+        trainingInputsNorm = normalizeMinMax(trainingInputs, normalizationParams)
+        testInputsNorm = normalizeMinMax(testInputs, normalizationParams)
+
 
         # Como el entrenamiento de RR.NN.AA. es no determinístico, hay que entrenar varias veces, y
         #  se crean vectores adicionales para almacenar las metricas para cada entrenamiento
@@ -708,9 +709,9 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
                 # (trainingIndices, validationIndices) = holdOut(size(trainingInputs,1), validationRatio*numFolds/(numFolds-1));
 
                 # Entrenamos la RNA, teniendo cuidado de codificar las salidas deseadas correctamente
-                ann, = trainClassANN(topology, (trainingInputs[trainingIndices,:],   trainingTargets[trainingIndices,:]),
+                ann, = trainClassANN(topology, (trainingInputsNorm[trainingIndices,:],   trainingTargets[trainingIndices,:]),
                     validationDataset = (trainingInputs[validationIndices,:], trainingTargets[validationIndices,:]),
-                    testDataset =       (testInputs,                          testTargets);
+                    testDataset =       (testInputsNorm,                          testTargets);
                     transferFunctions = transferFunctions,
                     maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate, maxEpochsVal=maxEpochsVal);
                     
@@ -718,8 +719,8 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
 
                 # Si no se desea usar conjunto de validacion, se entrena unicamente con conjuntos de entrenamiento y test,
                 #  teniendo cuidado de codificar las salidas deseadas correctamente
-                ann, = trainClassANN(topology, (trainingInputs, trainingTargets),
-                    testDataset = (testInputs,     testTargets);
+                ann, = trainClassANN(topology, (trainingInputsNorm, trainingTargets),
+                    testDataset = (testInputsNorm,     testTargets);
                     transferFunctions=transferFunctions,
                     maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate);
 
@@ -743,28 +744,16 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
         testF1Mean[numFold]          = mean(testF1EachRepetition);
         testConfusionMatrix    .+= mean(testConfusionMatrixEachRepetition, dims=3)[:,:,1];
 
-        # Calculamos la desviación estándar para cada métrica
-        testAccuracyStd[numFold]    = std(testAccuracyEachRepetition)
-        testErrorRateStd[numFold]   = std(testErrorRateEachRepetition)
-        testRecallStd[numFold]      = std(testRecallEachRepetition)
-        testSpecificityStd[numFold] = std(testSpecificityEachRepetition)
-        testPrecisionStd[numFold]   = std(testPrecisionEachRepetition)
-        testNPVStd[numFold]         = std(testNPVEachRepetition)
-        testF1Std[numFold]          = std(testF1EachRepetition)
+        
 
     end; # for numFold in 1:numFolds
 
     #return ((testAccuracyMean), (testAccuracyStd)), ((testErrorRateMean), (testErrorRateStd)), ((testRecallMean), (testRecallStd)), ((testSpecificityMean), (testSpecificityStd)), ((testPrecisionMean), (testPrecisionStd)), ((testNPVMean), (testNPVStd)), ((testF1Mean), (testF1Std)), testConfusionMatrix;
-    return ( (testAccuracyMean, testAccuracyStd),
-    (testErrorRateMean, testErrorRateStd),
-    (testRecallMean, testRecallStd),
-    (testSpecificityMean, testSpecificityStd),
-    (testPrecisionMean, testPrecisionStd),
-    (testNPVMean, testNPVStd),
-    (testF1Mean, testF1Std),
-    testConfusionMatrix )
- 
+    
 #return testAccuracyMean, testErrorRateMea, testRecall, testSpecificity, testPrecision, testNPV, testF1, testConfusionMatrix;
+    return testAccuracyMean, testErrorRateMean, testRecallMean, testSpecificityMean, testPrecisionMean, testNPVMean, testF1Mean, testConfusionMatrix
+
+
 
 end;
 
@@ -825,70 +814,66 @@ function modelCrossValidation(modelType::Symbol, modelHyperparameters::Dict, dat
     testF1              = Array{Float64,1}(undef, numFolds);
     # testConfusionMatrix = Array{Float64,3}(undef, length(classes), length(classes), numFolds);
     testConfusionMatrix = zeros(Int, length(classes), length(classes));
-
-    # Para cada fold, entrenamos
     for numFold in 1:numFolds
 
-        # Dividimos los datos en entrenamiento y test
-        trainingInputs    = inputs[crossValidationIndices.!=numFold,:];
-        testInputs        = inputs[crossValidationIndices.==numFold,:];
-        trainingTargets   = targets[crossValidationIndices.!=numFold];
-        testTargets       = targets[crossValidationIndices.==numFold];
+        # Dividimos los datos en entrenamiento y test (sin normalizar aún)
+        trainingInputs_raw = inputs[crossValidationIndices .!= numFold, :]
+        testInputs_raw     = inputs[crossValidationIndices .== numFold, :]
+        trainingTargets    = targets[crossValidationIndices .!= numFold]
+        testTargets        = targets[crossValidationIndices .== numFold]
 
-        # Creamos el modelo según lo que nos hayan pasado como parámetro
-        if modelType==:DoME
+        # Normalizamos con parámetros del conjunto de entrenamiento
+        mins = mapslices(minimum, trainingInputs_raw; dims=1)
+        maxs = mapslices(maximum, trainingInputs_raw; dims=1)
+        range = maxs .- mins .+ eps()  # evitar división por cero
 
-            testOutputs = trainClassDoME((trainingInputs, trainingTargets), testInputs, modelHyperparameters["maximumNodes"]);
+        trainingInputs = (trainingInputs_raw .- mins) ./ range
+        testInputs     = (testInputs_raw .- mins) ./ range
 
+        # Creamos el modelo
+        if modelType == :DoME
+            testOutputs = trainClassDoME((trainingInputs, trainingTargets), testInputs, modelHyperparameters["maximumNodes"])
         else
-
-            if modelType==:SVC
-                @assert((modelHyperparameters["kernel"] == "linear") || (modelHyperparameters["kernel"] == "poly") || (modelHyperparameters["kernel"] == "rbf") || (modelHyperparameters["kernel"] == "sigmoid"));
+            if modelType == :SVC
+                @assert((modelHyperparameters["kernel"] == "linear") || (modelHyperparameters["kernel"] == "poly") || (modelHyperparameters["kernel"] == "rbf") || (modelHyperparameters["kernel"] == "sigmoid"))
                 model = SVMClassifier(
                     kernel = 
-                        modelHyperparameters["kernel"]=="linear"  ? LIBSVM.Kernel.Linear :
-                        modelHyperparameters["kernel"]=="rbf"     ? LIBSVM.Kernel.RadialBasis :
-                        modelHyperparameters["kernel"]=="poly"    ? LIBSVM.Kernel.Polynomial :
-                        modelHyperparameters["kernel"]=="sigmoid" ? LIBSVM.Kernel.Sigmoid : nothing,
+                        modelHyperparameters["kernel"] == "linear"  ? LIBSVM.Kernel.Linear :
+                        modelHyperparameters["kernel"] == "rbf"     ? LIBSVM.Kernel.RadialBasis :
+                        modelHyperparameters["kernel"] == "poly"    ? LIBSVM.Kernel.Polynomial :
+                        modelHyperparameters["kernel"] == "sigmoid" ? LIBSVM.Kernel.Sigmoid : nothing,
                     cost   = Float64(modelHyperparameters["C"]),
                     gamma  = Float64(get(modelHyperparameters, "gamma",  -1)),
                     degree = Int32(  get(modelHyperparameters, "degree", -1)),
-                    coef0  = Float64(get(modelHyperparameters, "coef0",  -1)));
-                # Cuidado con los tipos de los argumentos cost, gamma, degree y coef0, tienen que ser esos. No vale, por ejemplo, que degree sea Int, tiene que ser Int32
-
-            elseif modelType==:DecisionTreeClassifier
-                model = DTClassifier(max_depth = modelHyperparameters["max_depth"], rng=Random.MersenneTwister(1));
-            elseif modelType==:KNeighborsClassifier
-                model = kNNClassifier(K = modelHyperparameters["n_neighbors"]);
+                    coef0  = Float64(get(modelHyperparameters, "coef0",  -1))
+                )
+            elseif modelType == :DecisionTreeClassifier
+                model = DTClassifier(max_depth = modelHyperparameters["max_depth"], rng=Random.MersenneTwister(1))
+            elseif modelType == :KNeighborsClassifier
+                model = kNNClassifier(K = modelHyperparameters["n_neighbors"])
             else
-                error(string("Unknown model ", modelType));
-            end;
+                error(string("Unknown model ", modelType))
+            end
 
-            # Creamos el objeto de tipo Machine
-            mach = machine(model, MLJ.table(trainingInputs), categorical(trainingTargets));
-
-            # Entrenamos el modelo con el conjunto de entrenamiento
+            mach = machine(model, MLJ.table(trainingInputs), categorical(trainingTargets))
             MLJ.fit!(mach, verbosity=0)
-
-            # Pasamos el conjunto de test
             testOutputs = MLJ.predict(mach, MLJ.table(testInputs))
-            # if modelType==:DecisionTreeClassifier || modelType==:KNeighborsClassifier
-            if modelType!=:SVC
+            if modelType != :SVC
                 testOutputs = mode.(testOutputs)
-            end;
-            # testOutputs = string.(testOutputs);
+            end
+        end
 
-        end;
+        # Evaluación
+        (testAccuracy[numFold], testErrorRate[numFold], testRecall[numFold], testSpecificity[numFold],
+        testPrecision[numFold], testNPV[numFold], testF1[numFold], testConfusionMatrixThisFold) =
+            confusionMatrix(testOutputs, testTargets, classes)
 
-        # Calculamos las metricas y las almacenamos en las posiciones de este fold de cada vector
-        (testAccuracy[numFold], testErrorRate[numFold], testRecall[numFold], testSpecificity[numFold], testPrecision[numFold], testNPV[numFold], testF1[numFold], testConfusionMatrixThisFold) =
-            confusionMatrix(testOutputs, testTargets, classes);
+        @assert isapprox(testAccuracy[numFold],
+            sum([testConfusionMatrixThisFold[numClass, numClass] for numClass in 1:length(classes)]) / sum(testConfusionMatrixThisFold))
 
-        @assert( isapprox( testAccuracy[numFold], sum([testConfusionMatrixThisFold[numClass,numClass] for numClass in 1:length(classes)])/sum(testConfusionMatrixThisFold) ) );
-
-        testConfusionMatrix .+= testConfusionMatrixThisFold;
-
-    end; # for numFold in 1:numFolds
+        testConfusionMatrix .+= testConfusionMatrixThisFold
+    end
+    # for numFold in 1:numFolds
 
     return testAccuracy, testErrorRate, testRecall, testSpecificity, testPrecision, testNPV, testF1, testConfusionMatrix
 
