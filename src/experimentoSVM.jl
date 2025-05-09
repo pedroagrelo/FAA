@@ -6,12 +6,13 @@ using LIBSVM
 
 export ejecutarSVM, realizar_anova
 
+
 function ejecutarSVM()
-    #Carga de datos
     df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
-    
+   
+
     k = 10
     cv_indices = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval.csv", DataFrame).Fold 
 
@@ -51,7 +52,7 @@ function ejecutarSVM()
 
         # Obtener resultados con manejo de errores
         try
-            accs, precisions, recalls, specificities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
+            accs, precisions, recalls, specificities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (inputs, targets), cv_indices)
 
             # Conversión garantizada a Vector{Float64}
             acc_vec = accs isa Number ? [Float64(accs) for _ in 1:k] : Float64.(accs)
@@ -66,7 +67,7 @@ function ejecutarSVM()
                      (degree !== missing ? "_degree$(degree)" : "")
 
             tiempo = @elapsed begin
-                accs, precisions, recalls, specificities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (X_norm, targets), cv_indices)
+                accs, precisions, recalls, specificities, vpns, _, f1s, _ = modelCrossValidation(:SVC, config, (inputs, targets), cv_indices)
             end
 
             push!(resultados, (
