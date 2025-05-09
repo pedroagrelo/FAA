@@ -59,7 +59,7 @@ function ejecutarRNA()
         f1_mean,
         _ = ANNCrossValidation(
             arch, (inputs, targets), cv_indices;
-            numExecutions=5,
+            numExecutions=50,
             maxEpochs=100,
             learningRate=0.01,
             validationRatio=0.1,
