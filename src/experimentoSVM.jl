@@ -6,11 +6,6 @@ using LIBSVM
 
 export ejecutarSVM, realizar_anova
 
-# function normalizacionANN(inputs::Matrix{<:Real})
-#     min_vals = minimum(inputs, dims=1)
-#     max_vals = maximum(inputs, dims=1)
-#     return 2 * ((inputs .- min_vals) ./ (max_vals .- min_vals)) .- 1
-# end
 
 function ejecutarSVM()
     df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
