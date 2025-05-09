@@ -162,4 +162,15 @@ function realizar_tukey_hsd(df::DataFrame, colname::Symbol = :Accuracy)
     end
 end
 
-end  # module
+function seleccionar_mejor_configuracion_svm(df::DataFrame)
+    # Encuentra el índice de la mejor accuracy promedio
+    promedios = [mean(a) for a in df.Accuracy]
+    desvios = [std(a) for a in df.Accuracy]
+    mejor_indice = argmax(promedios)
+    mejor_accuracy = promedios[mejor_indice]
+    mejor_std = desvios[mejor_indice]
+
+    println("\nLa mejor configuración de SVM es: ", df.Configuracion[mejor_indice])
+    println("Con un Accuracy promedio de: ", round(mejor_accuracy, digits=4), " ± ", round(mejor_std, digits=4))
+end
+end

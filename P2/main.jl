@@ -82,13 +82,14 @@ graficar_metricas_barras_dt("P2/RESULTADOS/resumen_resultados_crossval_dt.csv")
 
 println("\n Flujo experimento Árbol de Decisión finalizado.")
 
+
+# ------------------------------------------------------
+# Ejecutar experimento SVM
+# ------------------------------------------------------
 include("../src/experimentoSVM.jl")
 include("../src/plotsSVM.jl")
 using .experimentoSVM: ejecutarSVM
 using .plotsSVM: graficar_metricas_svm, resumir_metricas_svm
-# ------------------------------------------------------
-# Ejecutar experimento SVM
-# ------------------------------------------------------
 println("Ejecutando experimentos con SVM...")
 
 resultados = ejecutarSVM()  # <- genera un DataFrame con las métricas por fold
@@ -99,6 +100,7 @@ CSV.write("P2/RESULTADOS/resultados_svm_raw.csv", resultados)
 # -------------------------------------
 println("\nResultados del test ANOVA SVM:")
 experimentoSVM.realizar_anova(resultados)
+experimentoSVM.seleccionar_mejor_configuracion_svm(resultados)
 
 # -------------------------------------
 # Resumen y gráficas
