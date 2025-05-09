@@ -30,7 +30,7 @@ function graficar_metricas_dome(archivo_csv::String)
         savefig("P2/IMÁGENES/$metrica _dome.png")
     end
 
-    println("\n✅ Gráficas generadas como PNG para DoME.")
+    println("\n Gráficas generadas como PNG para DoME.")
 end
 
 end
