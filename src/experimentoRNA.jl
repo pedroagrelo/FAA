@@ -5,38 +5,21 @@ include("P1_soluciones.jl")
 
 
 export ejecutarRNA, realizar_anova
-# ------------------------------------------
-# Normalización Min-Max para RNA
-# ------------------------------------------
-function normalizacionANN(inputs::Matrix{<:Real})
-    return normalizeMinMax(inputs)
-end
 
-#maybe non fai falta, evitar data leakage normalizando antes de particionar o dataset en entrenamiento e test, e eso e antes de crossvaliation 
-# PROBEI TAMEN a estratificada vs a normal, pretty much the same no meu caso polo menos 
-
-
-# ------------------------------------------
-# Ejecutar RNA con validación cruzada k=10
-# ------------------------------------------
 function ejecutarRNA()
 
-    # 1. Leer dataset limpio
+    # Leer dataset limpio
     df = CSV.read("P2/OTROS_ARCHIVOS/alzheimers_limpio_balanced.csv", DataFrame)
     inputs = Matrix(select(df, Not(:Diagnosis)))
     targets = Vector(df.Diagnosis)
 
-    # 2. Normalizar entradas
-    #X_norm = normalizacionANN(inputs)
 
-    # 3. Generar índices de validación cruzada estratificada
-    k = 10
+
+    # Generar índices de validación cruzada estratificada
+
     cv_indices = CSV.read("P2/OTROS_ARCHIVOS/indices_crossval2.csv", DataFrame).Fold  #Cargar indices de cv comunes
-    df_indices = DataFrame(Fold = cv_indices)
-    #~CSV.write("P2/OTROS ARCHIVOS/indices_validacion_cruzada.csv", df_indices)
 
-    # Si hiciera repeticiones 3 veces vector para que cubra las repeticiones, la arquitectura y los folds
-    # AccuracyMean[i][j] → fold k del experimento j para la arquitectura i.
+    # Creamos
     # Como solo hacemos una repeticion me vale con el 2 vector, arquitecra y folds 
     # AccuracyMean[i] → 10 valores de accuracy para la arquitectura i.
     resultados = DataFrame(
@@ -50,7 +33,7 @@ function ejecutarRNA()
     )
 
 
-    # 4. Probar diferentes arquitecturas
+    # Probar diferentes arquitecturas
     architectures = [
         [12],
         [16],
@@ -63,11 +46,7 @@ function ejecutarRNA()
         [48, 32]
     ]
 
-    #ojo que quede o 10 porcento de test por que fago un k fold 
-
-    # 5x2 crossvalidatrion 
-
-    #2 3 4 e 5 elementos para favvorecer eses hiperpplanos de 2 en 2 basicamente 10, 6, 16  
+    
 
     for arch in architectures
         println("\n Evaluando arquitectura: ", arch ) 

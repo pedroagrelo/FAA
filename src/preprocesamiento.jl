@@ -11,20 +11,20 @@ export calcular_correlaciones, filtrar_dataset, balancear_dataset, analizar_outl
 
 
 function calcular_correlaciones(path::String, output_plot_path::String)
-    # 1. Leer el archivo CSV
+    # Leer el archivo CSV
     df = CSV.read(path, DataFrame)
 
-    # 2. Seleccionar solo columnas numéricas (incluyendo Diagnosis)
+    # Seleccionar solo columnas numéricas (incluyendo Diagnosis)
     numeric_df = select(df, names(df, eltype.(eachcol(df)) .<: Number))
 
-    # 3. Separar Diagnosis como vector
+    # Separar Diagnosis como vector
     target = numeric_df[:, :Diagnosis]
 
-    # 4. Calcular correlación de Pearson entre Diagnosis y cada otra variable
+    #  Calcular correlación de Pearson entre Diagnosis y cada otra variable
     cor_vals = [cor(target, numeric_df[:, col]) for col in names(numeric_df) if col != :Diagnosis]
     colnames = [col for col in names(numeric_df) if col != :Diagnosis]
 
-    # 5. Graficar como heatmap 1D (barra vertical de correlaciones)
+    #  Graficar como heatmap 1D (barra vertical de correlaciones)
     bar(
         reverse(cor_vals);
         orientation = :horizontal,
